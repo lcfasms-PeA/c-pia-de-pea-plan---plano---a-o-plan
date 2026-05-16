@@ -10,10 +10,12 @@ function createContextWithRole(role: string): { ctx: TrpcContext; clearedCookies
   const user: AuthenticatedUser = {
     id: 1,
     openId: "test-user",
+    institutionId: null,
     email: "test@example.com",
     name: "Test User",
     loginMethod: "manus",
     role: role as any,
+    status: "Ativo",
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),

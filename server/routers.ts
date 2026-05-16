@@ -56,8 +56,17 @@ export const appRouter = router({
     me: protectedProcedure.query(({ ctx }) => ctx.user),
     
     list: coordinatorProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+      
+      // admin_geral vê todos os usuários
+      if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
+        return db.select().from(users);
+      }
+      
+      // coordenador vê apenas usuários da sua instituição
       if (!ctx.user?.institutionId) {
-        throw new Error("Institution not found");
+        return [];
       }
       return getUsersByInstitution(ctx.user.institutionId);
     }),
@@ -65,11 +74,21 @@ export const appRouter = router({
     listByRole: coordinatorProcedure
       .input(z.object({ role: z.string() }))
       .query(async ({ ctx, input }) => {
-        if (!ctx.user?.institutionId) {
-          throw new Error("Institution not found");
-        }
         const db = await getDb();
         if (!db) return [];
+        
+        // admin_geral vê todos os usuários com um papel específico
+        if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
+          return db
+            .select()
+            .from(users)
+            .where(eq(users.role, input.role as any));
+        }
+        
+        // coordenador vê apenas usuários da sua instituição com um papel específico
+        if (!ctx.user?.institutionId) {
+          return [];
+        }
         return db
           .select()
           .from(users)
@@ -108,18 +127,26 @@ export const appRouter = router({
             "aluno_editor",
             "aluno_visualizador",
           ]),
+          institutionId: z.number().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        if (!ctx.user?.institutionId) {
-          throw new Error("Institution not found");
-        }
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
+        // admin_geral pode criar usuários em qualquer instituição
+        let institutionId = input.institutionId;
+        if (ctx.user?.role !== "admin_geral" && ctx.user?.role !== "admin") {
+          // coordenador cria usuários na sua instituição
+          if (!ctx.user?.institutionId) {
+            throw new Error("Institution not found");
+          }
+          institutionId = ctx.user.institutionId;
+        }
+        
         const result = await db.insert(users).values({
           openId: `temp-${Date.now()}`,
-          institutionId: ctx.user.institutionId,
+          institutionId: institutionId ?? null,
           name: input.name,
           email: input.email,
           role: input.role as any,
@@ -161,17 +188,21 @@ export const appRouter = router({
   // ============ TURMAS ============
   classes: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      if (!ctx.user?.institutionId) return [];
-      
       const db = await getDb();
       if (!db) return [];
       
+      // admin_geral vê todas as turmas
+      if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
+        return db.select().from(classes);
+      }
+      
       // Professores veem apenas suas turmas
-      if (ctx.user.role === "professor") {
+      if (ctx.user?.role === "professor") {
         return getClassesByProfessor(ctx.user.id);
       }
       
-      // Coordenadores e admins veem todas as turmas da instituição
+      // Coordenadores veem todas as turmas da sua instituição
+      if (!ctx.user?.institutionId) return [];
       return db
         .select()
         .from(classes)
@@ -207,18 +238,31 @@ export const appRouter = router({
           enrollmentType: z.string().optional(),
           startDate: z.string().optional(),
           endDate: z.string().optional(),
+          institutionId: z.number().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        if (!ctx.user?.institutionId) {
-          throw new Error("Institution not found");
+        // admin_geral pode criar turmas em qualquer instituição
+        let institutionId = input.institutionId;
+        if (ctx.user?.role !== "admin_geral" && ctx.user?.role !== "admin") {
+          // professor cria turmas na sua instituição
+          if (!ctx.user?.institutionId) {
+            throw new Error("Institution not found");
+          }
+          institutionId = ctx.user.institutionId;
         }
         
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
+        // Ensure institutionId is always provided for classes
+        const finalInstitutionId = institutionId || ctx.user.institutionId;
+        if (!finalInstitutionId) {
+          throw new Error("Institution ID is required to create a class");
+        }
+        
         const result = await db.insert(classes).values({
-          institutionId: ctx.user.institutionId,
+          institutionId: finalInstitutionId,
           professorId: ctx.user.id,
           name: input.name,
           enrollmentType: input.enrollmentType || "InstituicaoEnsino",
