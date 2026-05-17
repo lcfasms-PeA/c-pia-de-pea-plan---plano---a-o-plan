@@ -2,7 +2,7 @@
 
 ## 📋 Visão Geral
 
-**PeA-Plan** é uma plataforma web educacional para elaboração de planos de negócios, desenvolvida com a metodologia SPPLAN (SEBRAE/FIESP). A plataforma suporta múltiplos perfis de usuários (admin, professor, aluno) com controle granular de permissões, ferramentas estratégicas integradas, gamificação e comunicação em tempo real.
+**PeA-Plan** é uma plataforma web educacional para elaboração de planos de negócios, desenvolvida com exemplo do SPPLAN (SEBRAE/FIESP). A plataforma suporta múltiplos perfis de usuários (admin, professor, aluno) com controle granular de permissões, ferramentas estratégicas integradas, gamificação e comunicação em tempo real.
 
 ### Stack Tecnológico
 
@@ -386,6 +386,19 @@ client/src/
 
 ---
 
+## �️ Instalação e execução
+
+- `pnpm install` — instalar dependências
+- `pnpm run dev` — iniciar em modo desenvolvimento (Vite + servidor Express)
+- `pnpm run build` — gerar `dist/public` e `dist/index.js`
+- `pnpm run start` — iniciar em produção e servir o frontend estático de `dist/public`
+
+Observações:
+- os scripts usam `cross-env` para compatibilidade Windows/Linux
+- `server/_core/vite.ts` foi ajustado para servir `dist/public` em produção
+
+---
+
 ## 📈 Escalabilidade
 
 1. **Índices de BD**: Criar índices em instituicao_id, usuario_id, turma_id
@@ -398,10 +411,9 @@ client/src/
 
 ## 📚 Documentação Adicional
 
-- [Manual do Usuário](./docs/manual_usuario.md)
 - [Guia de Instalação](./docs/manual_instalacao.md)
-- [Referência da API](./docs/api_reference.md)
-- [Manual de Tema](./docs/manual_tema.md)
+
+> Outros manuais planejados: `manual_usuario.md`, `api_reference.md`, `manual_tema.md`
 
 ---
 
