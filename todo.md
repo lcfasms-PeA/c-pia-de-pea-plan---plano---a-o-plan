@@ -1,271 +1,254 @@
-# PeA-Plan - TODO List
+# PeA-Plan - Mapa de Governanca Tecnica
 
-## Fase 1: Autenticação e Controle de Permissões
+Este arquivo substitui o checklist literal baseado no roteiro `docs/PeA-Plan_Completo.docx`.
+O DOCX descreve uma arquitetura alvo com 85 arquivos em `backend/`, `frontend/`,
+`database/` e `scripts/`, usando JavaScript/Express/PostgreSQL. A implementacao real
+do repositorio usa TypeScript, React, tRPC, Drizzle e a estrutura:
 
-- [x] Estender schema Drizzle com tabelas de instituição, turma, plano, pontuação, conquistas
-- [x] Criar migration SQL para PostgreSQL
-- [x] Implementar middleware de autenticação por papel (admin, professor, aluno)
-- [x] Criar procedures tRPC protegidas: protectedProcedure, adminProcedure, professorProcedure, alunoProcedure
-- [x] Implementar verificação de permissões em cada endpoint
-- [x] Criar página de Login com formulário
-- [x] Testar fluxo de login e logout
-- [x] Implementar persistência de sessão
+- `client/`: frontend React + TypeScript
+- `server/`: backend tRPC + helpers de dominio
+- `shared/`: tipos, constantes e schemas compartilhados
+- `drizzle/`: schema e migrations
+- `docs/`: documentacao e roteiro original
+
+Por isso, o status abaixo mede equivalencia funcional, nao igualdade literal de nomes
+como `Plano.js`, `planoController.js` ou `frontend/src/components/plano/MapaPlano.jsx`.
+
+## Validacao Atual
+
+- [x] TypeScript: `.\node_modules\.bin\tsc.cmd --noEmit`
+- [x] Testes: `.\node_modules\.bin\vitest.cmd run --cache false`
+- [x] Resultado da ultima validacao: 9 arquivos de teste, 107 testes aprovados
+
+## Equivalencias Arquiteturais
+
+| Roteiro DOCX / TODO antigo | Implementacao real |
+|---|---|
+| `backend/src/server.js` | `server/_core/index.ts` |
+| `backend/src/routes/*.js` | `server/routers.ts` com routers tRPC |
+| `backend/src/controllers/*.js` | procedures tRPC em `server/routers.ts` |
+| `backend/src/models/*.js` | `drizzle/schema.ts`, `drizzle/relations.ts` e helpers |
+| `backend/src/services/exportacaoService.js` | `server/pdfExportHelper.ts`, `server/excelExportHelper.ts`, `server/wordExportHelper.ts` |
+| `backend/src/services/gamificacaoService.js` | `server/gamificationHelper.ts` |
+| `backend/src/services/progressoService.js` | `server/planProgressHelper.ts` |
+| `frontend/src/App.jsx` | `client/src/App.tsx` |
+| `frontend/src/pages/Login.jsx` | `client/src/pages/Login.tsx` |
+| `frontend/src/components/dashboard/*.jsx` | `client/src/components/Dashboard*.tsx` |
+| `frontend/src/components/plano/MapaPlano.jsx` | `client/src/components/MapaPlano.tsx` |
+| `frontend/src/components/plano/Canvas.jsx` | `client/src/components/CanvasEditor.tsx` |
+| `frontend/src/components/plano/Swot.jsx` | `client/src/components/SWOTEditor.tsx` |
+| `frontend/src/components/gamificacao/Ranking.jsx` | `client/src/components/Ranking.tsx` |
+| `frontend/src/components/notificacoes/Notificacao.jsx` | `client/src/components/NotificationCenter.tsx` |
+| `database/pea_plan_postgresql.sql` | `drizzle/schema.ts` e migrations em `drizzle/` |
+
+## Fase 1: Autenticacao e Controle de Permissoes
+
+- [x] Schema de instituicoes, usuarios, turmas, planos, pontuacao e conquistas em `drizzle/schema.ts`
+- [x] Middleware/procedures de autenticacao: `protectedProcedure` em `server/_core/trpc.ts`
+- [x] RBAC por papel: `server/_core/roleMiddleware.ts`
+- [x] Login/logout: `client/src/pages/Login.tsx` e `server/routers.ts`
+- [x] Testes de autenticacao/permissao: `server/auth.logout.test.ts`, `server/auth.permissions.test.ts`
+- [ ] Reforcar validacao de posse/escopo em endpoints que recebem `planId` ou `id`
 
 ## Fase 2: Dashboards Personalizados
 
-- [x] Criar DashboardAdmin.tsx com estatísticas gerais (instituições, usuários, turmas, planos, pontos)
-- [x] Criar DashboardProfessor.tsx com turmas e alunos
-- [x] Criar DashboardAluno.tsx com planos e pontuação
-- [x] Implementar roteamento condicional baseado em papel
-- [x] Criar componente de navegação por perfil
-- [x] Implementar cards de estatísticas com dados em tempo real
-- [x] Adicionar ações rápidas em cada dashboard
-- [x] Criar testes vitest para dashboards
+- [x] Dashboard admin: `client/src/components/DashboardAdmin.tsx`
+- [x] Dashboard professor: `client/src/components/DashboardProfessor.tsx`
+- [x] Dashboard aluno: `client/src/components/DashboardAluno.tsx`
+- [x] Rota: `client/src/pages/Dashboard.tsx`
+- [x] Navegacao: `client/src/components/Navigation.tsx`
+- [x] Testes: `client/src/components/__tests__/Dashboards.test.tsx`
+- [ ] Validar se todos os cards usam dados reais, nao mocks/dados estaticos
 
-## Fase 3: Módulo de Elaboração do Plano
+## Fase 3: Modulo de Elaboracao do Plano
 
-- [x] Criar schema para tabela planos com 8 seções (JSONB)
-- [x] Implementar endpoint trpc.planos.criar
-- [x] Implementar endpoint trpc.planos.listar
-- [x] Implementar endpoint trpc.planos.obterPorId
-- [x] Implementar endpoint trpc.planos.atualizar
-- [x] Criar componente MapaPlano.tsx (visualização de progresso)
-- [x] Criar componente EditorPlano.tsx com 8 seções
-- [x] Implementar cálculo de progresso (percentual de seções preenchidas)
-- [x] Criar formulários para cada seção do plano
-- [x] Implementar validação de campos obrigatórios
-- [x] Adicionar auto-save a cada 30 segundos
-- [x] Criar testes vitest para planos
+- [x] Schema de planos: `businessPlans` em `drizzle/schema.ts`
+- [x] Endpoints equivalentes a `trpc.planos.*`: `businessPlans.*` em `server/routers.ts`
+- [x] Editor: `client/src/components/EditorPlano.tsx`
+- [x] Mapa do plano: `client/src/components/MapaPlano.tsx`
+- [x] Pagina de edicao: `client/src/pages/PlanEditor.tsx`
+- [x] Calculo de progresso: `server/planProgressHelper.ts`
+- [x] Testes: `server/businessPlans.test.ts`
+- [ ] Integrar triggers de progresso com gamificacao/notificacoes
+- [ ] Reforcar autorizacao por dono/turma/professor/admin em leitura, edicao e exportacao
 
-## Fase 4: Ferramentas Estratégicas
+## Fase 4: Ferramentas Estrategicas
 
 ### SWOT
-- [x] Criar schema para tabela analise_swot
-- [x] Implementar endpoint trpc.swot.obter
-- [x] Implementar endpoint trpc.swot.salvar
-- [x] Criar componente Swot.tsx com matriz interativa
-- [x] Implementar drag-and-drop para itens SWOT (usando react-beautiful-dnd)
-- [x] Adicionar validação de preenchimento
+
+- [x] Schema: `swotAnalysis` em `drizzle/schema.ts`
+- [x] Componente: `client/src/components/SWOTEditor.tsx`
+- [x] Helper de analise: `server/strategicHelper.ts`
+- [ ] Confirmar persistencia CRUD dedicada ou consolidar formalmente no JSON do plano
 
 ### Business Model Canvas
-- [x] Criar schema para tabela canvas_modelo
-- [x] Implementar endpoint trpc.canvas.obter
-- [x] Implementar endpoint trpc.canvas.salvar
-- [x] Criar componente Canvas.tsx com 9 blocos
-- [x] Implementar edição inline dos blocos
-- [x] Adicionar visualização de relacionamentos
 
-### Análise de Risco
-- [x] Criar schema para tabela analise_risco
-- [x] Implementar endpoint trpc.risco.listar
-- [x] Implementar endpoint trpc.risco.criar
-- [x] Implementar endpoint trpc.risco.atualizar
-- [x] Criar componente de matriz de risco (probabilidade x impacto)
-- [x] Implementar cálculo de risco total
+- [x] Schema: `canvasModels` em `drizzle/schema.ts`
+- [x] Componente: `client/src/components/CanvasEditor.tsx`
+- [x] Validacao/helper: `server/strategicHelper.ts`
+- [ ] Confirmar endpoints dedicados `canvas.obter/salvar` ou documentar equivalencia atual
+
+### Analise de Risco
+
+- [x] Schema: `riskAnalysis` em `drizzle/schema.ts`
+- [x] Componente: `client/src/components/RiskMatrix.tsx`
+- [x] Helper: `server/strategicHelper.ts`
+- [ ] Expor/listar CRUD dedicado para riscos, se a decisao for tabela propria
 
 ### Cronograma
-- [x] Criar schema para tabela cronograma
-- [x] Implementar endpoints CRUD para cronograma
-- [x] Criar componente de timeline/gantt (TimelineGantt.tsx)
-- [x] Implementar rastreamento de tarefas
 
-## Fase 5: Módulo Financeiro
+- [x] Schema: `schedules` em `drizzle/schema.ts`
+- [x] Componente: `client/src/components/TimelineGantt.tsx`
+- [ ] Expor CRUD dedicado para cronograma
 
-- [x] Criar schema para tabela dados_financeiros
-- [x] Implementar cálculo de VPL (Valor Presente Líquido)
-- [x] Implementar cálculo de TIR (Taxa Interna de Retorno)
-- [x] Implementar cálculo de Payback
-- [x] Implementar cálculo de Fluxo de Caixa
-- [x] Implementar cálculo de DRE (Demonstração de Resultado)
-- [x] Implementar cálculo de Balanço Patrimonial
-- [ ] Criar componente SecaoFinanceira.tsx
-- [ ] Implementar gráficos de projeção financeira
-- [x] Criar testes vitest para cálculos financeiros
+## Fase 5: Modulo Financeiro
 
-## Fase 6: Gamificação
+- [x] Calculos VPL, TIR, Payback, DRE, Balanco e indicadores: `server/financialHelper.ts`
+- [x] Componente financeiro: `client/src/components/SecaoFinanceira.tsx`
+- [x] Dashboard financeiro: `client/src/components/FinancialDashboard.tsx`
+- [x] Pagina/rota: `client/src/pages/FinancialAnalysis.tsx`, rota `/financial-analysis`
+- [x] Testes financeiros: `server/strategic.financial.test.ts`, `client/src/components/__tests__/SecaoFinanceira.test.tsx`
+- [x] Validacao de dados financeiros no componente
 
-- [x] Criar schema para tabelas pontuacao_usuarios, conquistas, usuarios_conquistas, historico_pontos
-- [x] Implementar endpoint trpc.gamificacao.pontuacao
-- [x] Implementar endpoint trpc.gamificacao.ranking
-- [x] Implementar endpoint trpc.gamificacao.conquistas
-- [x] Implementar lógica de adição de pontos (interno)
-- [x] Criar sistema de níveis (1000 XP por nível)
-- [x] Criar 10+ conquistas (ex: "Primeira Seção", "Plano Completo", "Líder de Turma")
-- [ ] Implementar trigger de conquistas ao concluir seções
-- [ ] Criar componente Ranking.tsx
-- [ ] Criar componente Conquistas.tsx
-- [ ] Criar componente Pontuacao.tsx (exibição de pontos/nível)
-- [ ] Implementar animações ao ganhar pontos
-- [x] Criar testes vitest para gamificação
+## Fase 6: Gamificacao
 
-## Fase 7: Gestão de Turmas
+- [x] Schemas: `userScores`, `achievements`, `userAchievements`, `pointsHistory`
+- [x] Helper: `server/gamificationHelper.ts`
+- [x] Router: `gamification` em `server/routers.ts`
+- [x] Componentes: `Ranking.tsx`, `Conquistas.tsx`, `Pontuacao.tsx`
+- [x] Sistema de niveis/conquistas em helper
+- [ ] Trigger real ao concluir secoes do plano
+- [ ] Criar notificacao ao ganhar conquista
+- [ ] Revisar ranking para considerar todos os alunos da turma, nao apenas primeiro ID
+- [ ] Adicionar testes de integracao plano -> pontos -> conquistas
 
-- [ ] Criar schema para tabelas turmas e matriculas
-- [ ] Implementar endpoint trpc.turmas.criar (apenas professor)
-- [ ] Implementar endpoint trpc.turmas.listar
-- [ ] Implementar endpoint trpc.turmas.obterPorId
-- [ ] Implementar endpoint trpc.turmas.atualizar
-- [ ] Implementar endpoint trpc.turmas.matricular
-- [ ] Implementar endpoint trpc.turmas.removerAluno
-- [ ] Criar página de Gerenciamento de Turmas
-- [ ] Criar formulário de criação de turma
-- [ ] Criar lista de alunos por turma
-- [ ] Implementar importação em lote de alunos (CSV/Excel)
-- [ ] Criar testes vitest para turmas
+## Fase 7: Gestao de Turmas
 
-## Fase 8: Notificações Automáticas
+- [x] Schemas: `classes`, `enrollments`
+- [x] Router: `classes` em `server/routers.ts`
+- [x] Pagina: `client/src/pages/ClassManagement.tsx`
+- [x] Componentes: `ClassForm.tsx`, `ClassList.tsx`, `ClassStudents.tsx`, `BulkEnrollDialog.tsx`
+- [x] Parser de importacao: `client/src/lib/parseBulkEnroll.ts`
+- [x] Testes: `client/src/components/__tests__/ClassManagement.test.tsx`
+- [ ] Implementar endpoint de delecao/arquivamento de turma, se necessario
 
-- [x] Criar schema para tabela notificacoes
-- [x] Implementar endpoint trpc.notificacoes.listar
-- [x] Implementar endpoint trpc.notificacoes.marcarComoLida
-- [ ] Implementar trigger de notificação ao concluir seção
-- [ ] Implementar trigger de notificação ao ganhar conquista
-- [x] Criar componente Notificacao.tsx (NotificationCenter.tsx com dropdown)
-- [ ] Implementar Socket.io para notificações em tempo real
-- [x] Implementar badge de notificações não lidas
-- [ ] Criar testes vitest para notificações
+## Fase 8: Notificacoes Automaticas
+
+- [x] Schema: `notifications` em `drizzle/schema.ts`
+- [x] Router: `notifications.list`, `notifications.markAsRead`
+- [x] Componente: `client/src/components/NotificationCenter.tsx`
+- [x] Service worker/PWA com base para push: `client/public/sw.ts`
+- [ ] Substituir simulacao do `NotificationCenter` por dados reais do backend
+- [ ] Trigger ao concluir secao
+- [ ] Trigger ao ganhar conquista
+- [ ] Tempo real via Socket.io, SSE ou polling governado
+- [ ] Testes de notificacoes
 
 ## Fase 9: Chat em Tempo Real
 
-- [ ] Criar schema para tabela mensagens
-- [ ] Implementar Socket.io para chat
-- [ ] Implementar endpoint trpc.chat.listar
-- [ ] Implementar endpoint trpc.chat.enviar
-- [ ] Implementar endpoint trpc.chat.deletar
-- [ ] Criar componente Chat.tsx
-- [ ] Implementar scroll automático para mensagens novas
-- [ ] Implementar indicador de digitação
-- [ ] Implementar upload de arquivos em mensagens
-- [ ] Implementar reações a mensagens
-- [ ] Criar testes vitest para chat
+- [x] Schema inicial: `messages` em `drizzle/schema.ts`
+- [ ] Router `chat.listar/enviar/deletar`
+- [ ] Componente `Chat.tsx` ou adaptar `AIChatBox.tsx` se for chat assistivo
+- [ ] Tempo real via Socket.io/SSE
+- [ ] Upload de arquivos em mensagens
+- [ ] Indicador de digitacao
+- [ ] Reacoes a mensagens
+- [ ] Testes de chat
 
-## Fase 10: Exportação de Relatórios
+## Fase 10: Exportacao de Relatorios
 
-- [x] Implementar exportação em PDF (docx)
-- [ ] Implementar exportação em Excel (exceljs)
-- [ ] Implementar exportação em Word (docx)
-- [x] Criar endpoint trpc.relatorios.exportarPDF
-- [ ] Criar endpoint trpc.relatorios.exportarExcel
-- [ ] Criar endpoint trpc.relatorios.exportarWord
-- [ ] Criar componente Exportacao.tsx
-- [x] Implementar opções de exportação (incluir capa, sumário, gráficos, tabelas)
-- [ ] Implementar fila de processamento para relatórios grandes
-- [x] Criar testes vitest para exportação
+- [x] PDF: `server/pdfExportHelper.ts`, endpoint `businessPlans.exportPDF`
+- [x] Excel: `server/excelExportHelper.ts`, endpoint `businessPlans.exportExcel`
+- [x] Word: `server/wordExportHelper.ts`, endpoint `businessPlans.exportWord`
+- [x] Testes: `server/pdfExport.test.ts`
+- [x] Personalizacao de capa: `server/coverCustomization.ts`
+- [x] Testes de capa: `server/coverCustomization.test.ts`
+- [ ] Componente `Exportacao.tsx`
+- [ ] Fila/processamento assincrono para relatorios grandes
+- [ ] Validar posse do plano antes de exportar
+- [ ] Endpoint/upload real de logotipo
+- [ ] Preview de capa
 
-## Fase 11: Captação de Recursos
+## Fase 11: Captacao de Recursos
 
-- [ ] Criar schema para tabela captacao_recursos
-- [ ] Implementar endpoint trpc.captacao.listar
-- [ ] Implementar endpoint trpc.captacao.criar
-- [ ] Implementar endpoint trpc.captacao.atualizar
-- [ ] Criar componente CaptacaoRecursos.tsx
-- [ ] Implementar filtros por tipo (edital, Lei Rouanet, crowdfunding, etc.)
-- [ ] Implementar integração com APIs de editais (SALIC, etc.)
-- [ ] Criar testes vitest para captação
+- [x] Schema inicial: `resourceCapture` em `drizzle/schema.ts`
+- [ ] Router `captacao.listar/criar/atualizar`
+- [ ] Componente `CaptacaoRecursos.tsx`
+- [ ] Filtros por tipo de recurso
+- [ ] Integracao externa com APIs/editais, quando houver fonte oficial definida
+- [ ] Testes de captacao
 
 ## Fase 12: Tema Institucional
 
-- [ ] Criar schema para tabela temas
-- [ ] Implementar endpoint trpc.tema.obter
-- [ ] Implementar endpoint trpc.tema.salvar
-- [ ] Criar componente ThemeConfig.tsx
-- [ ] Implementar seletor de cores (primária, secundária, destaque, fundo, texto)
-- [ ] Implementar seletor de fontes (principal, títulos)
-- [ ] Implementar upload de logotipo
-- [ ] Implementar upload de banner
-- [ ] Implementar aplicação dinâmica de tema em toda a aplicação
-- [ ] Implementar geração de CSS dinâmico
-- [ ] Criar testes vitest para tema
+- [x] Schema: `themes` em `drizzle/schema.ts`
+- [x] Router: `theme.get`, `theme.save`
+- [x] Contexto base: `client/src/contexts/ThemeContext.tsx`
+- [ ] Componente `ThemeConfig.tsx`
+- [ ] Aplicacao dinamica das cores/fontes institucionais no app
+- [ ] Upload de logotipo/banner
+- [ ] Geracao/aplicacao de CSS dinamico
+- [ ] Testes de tema
 
 ## Fase 13: Assistente Inteligente
 
-- [ ] Implementar integração com LLM (OpenAI/Anthropic)
-- [ ] Criar endpoint trpc.assistente.sugerir (sugerir conteúdo para seção)
-- [ ] Criar endpoint trpc.assistente.analisar (analisar consistência do plano)
-- [ ] Criar endpoint trpc.assistente.feedback (gerar feedback personalizado)
-- [ ] Criar componente de chat com assistente
-- [ ] Implementar streaming de respostas
-- [ ] Implementar histórico de conversa
-- [ ] Criar testes vitest para assistente
+- [x] Infraestrutura LLM: `server/_core/llm.ts`
+- [x] Componente base de chat IA: `client/src/components/AIChatBox.tsx`
+- [ ] Router `assistente.sugerir`
+- [ ] Router `assistente.analisar`
+- [ ] Router `assistente.feedback`
+- [ ] Streaming de respostas
+- [ ] Historico de conversa
+- [ ] Testes de assistente
 
-## Fase 14: Acompanhamento de Progresso (Professor)
+## Fase 14: Acompanhamento de Progresso do Professor
 
-- [ ] Criar dashboard de progresso por aluno
-- [ ] Implementar gráficos de progresso (seções completas, pontos, nível)
-- [ ] Implementar filtros por turma
-- [ ] Implementar exportação de relatório de progresso
-- [ ] Criar testes vitest para acompanhamento
+- [ ] Dashboard dedicado de progresso por aluno
+- [ ] Graficos de secoes completas, pontos e nivel
+- [ ] Filtros por turma
+- [ ] Exportacao de relatorio de progresso
+- [ ] Testes de acompanhamento
 
 ## Fase 15: Testes e Qualidade
 
-- [ ] Criar testes vitest para todos os endpoints tRPC
-- [ ] Criar testes vitest para componentes principais
-- [ ] Implementar testes de integração
-- [ ] Implementar testes de permissões
-- [ ] Implementar testes de validação de dados
-- [ ] Criar testes de performance
-- [ ] Configurar CI/CD (GitHub Actions)
+- [x] Suite Vitest executando com sucesso
+- [x] TypeScript sem erros
+- [x] Testes de auth/permissao
+- [x] Testes de dashboards
+- [x] Testes de turmas
+- [x] Testes financeiros
+- [x] Testes de exportacao/capa
+- [ ] Testes para todos os endpoints tRPC
+- [ ] Testes de integracao entre modulos
+- [ ] Testes de permissao por posse/tenant
+- [ ] Testes de performance
+- [ ] CI/CD com GitHub Actions
 
-## Fase 16: Documentação e Deploy
+## Fase 16: Documentacao e Deploy
 
-- [ ] Criar manual do usuário (PDF)
-- [ ] Criar guia de instalação
-- [ ] Criar referência da API
-- [ ] Criar manual de tema
-- [ ] Preparar scripts de instalação (Linux, Windows)
-- [ ] Preparar docker-compose.yml
-- [ ] Preparar .env.example
-- [ ] Criar README.md completo
-- [ ] Fazer deploy em staging
-- [ ] Fazer deploy em produção
+- [x] `docker-compose.yml`
+- [x] `Dockerfile`
+- [x] `.env.example`
+- [x] `install.sh`
+- [x] `install.bat`
+- [x] Documentacao parcial em `docs/`, `DOCKER_INSTALL.md`, `README_DOCUMENTATION.md`
+- [ ] README principal completo e alinhado a TypeScript/tRPC/Drizzle
+- [ ] Manual do usuario final
+- [ ] Referencia da API tRPC
+- [ ] Manual de tema
+- [ ] Deploy em staging
+- [ ] Deploy em producao
 
----
+## Gaps Prioritarios De Governanca
 
-## Resumo de Funcionalidades
+1. [ ] Validar posse/escopo em endpoints de planos e exportacoes.
+2. [ ] Implementar triggers reais de gamificacao e notificacoes ao concluir secoes.
+3. [ ] Atualizar documentacao final para a arquitetura real, evitando a cobranca literal dos 85 arquivos JS do DOCX.
+4. [ ] Remover/evitar versionamento de `.env` real; manter apenas `.env.example`.
+5. [ ] Decidir formalmente se SWOT/Canvas/Risco/Cronograma usam tabelas dedicadas ou JSON do plano.
 
-| Funcionalidade | Status | Prioridade |
-|---|---|---|
-| Autenticação e Permissões | ⬜ | 🔴 Alta |
-| Dashboards por Perfil | ⬜ | 🔴 Alta |
-| Elaboração do Plano (8 seções) | ⬜ | 🔴 Alta |
-| Mapa de Progresso | ⬜ | 🔴 Alta |
-| SWOT | ⬜ | 🟡 Média |
-| Business Model Canvas | ⬜ | 🟡 Média |
-| Módulo Financeiro (VPL, TIR, etc.) | ⬜ | 🔴 Alta |
-| Gamificação | ⬜ | 🟡 Média |
-| Gestão de Turmas | ⬜ | 🔴 Alta |
-| Notificações Automáticas | ⬜ | 🟡 Média |
-| Chat em Tempo Real | ⬜ | 🟡 Média |
-| Exportação de Relatórios | ⬜ | 🟡 Média |
-| Captação de Recursos | ⬜ | 🟢 Baixa |
-| Tema Institucional | ⬜ | 🟡 Média |
-| Assistente Inteligente | ⬜ | 🟢 Baixa |
+## Proxima Acao Recomendada
 
----
-
-**Legenda**: ⬜ Não iniciado | 🟨 Em progresso | ✅ Completo
-
-
-## Fase 10: Gráficos Financeiros Interativos
-
-- [x] Criar componente FinancialDashboard com Recharts
-- [x] Implementar gráfico de Fluxo de Caixa (AreaChart)
-- [x] Implementar gráfico de DRE (BarChart)
-- [x] Implementar gráfico de Indicadores (BarChart)
-- [x] Implementar gráfico de Composição de Custos (PieChart)
-- [x] Adicionar análise de cenários (Pessimista, Base, Otimista)
-- [x] Criar página FinancialAnalysis.tsx
-- [x] Adicionar rota /financial-analysis
-- [x] Criar testes para componentes
-- [x] Implementar indicadores de saúde financeira
-
-## Fase 10.1: Personalização de Capa de Relatórios
-
-- [x] Criar schema para armazenar URLs de logótipos (empresa e instituição)
-- [ ] Implementar endpoint para upload de logótipo
-- [x] Integrar logótipos na capa do documento Word
-- [x] Adicionar opções de personalização (cores, fontes, posição do logo)
-- [x] Implementar validação de imagens (tamanho, formato)
-- [ ] Criar componente de preview de capa
-- [x] Adicionar suporte a temas de capa (padrão, minimalista, corporativo)
-- [x] Criar testes vitest para personalização de capa
+Executar a etapa 3 do plano: fechar lacunas de seguranca e integracao, comecando por
+validacao de posse em `businessPlans.getById`, `businessPlans.update`,
+`businessPlans.updateSection`, `businessPlans.getProgress`, `businessPlans.exportPDF`,
+`businessPlans.exportExcel` e `businessPlans.exportWord`.

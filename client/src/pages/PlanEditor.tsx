@@ -3,6 +3,7 @@ import { useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import MapaPlano from "@/components/MapaPlano";
 import EditorPlano from "@/components/EditorPlano";
+import SecaoFinanceira from "@/components/SecaoFinanceira";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function PlanEditor() {
     { id: planId! },
     { enabled: !!planId }
   );
+  const updateSectionMutation = trpc.businessPlans.updateSection.useMutation();
 
   if (!planId) {
     return (
@@ -73,8 +75,8 @@ export default function PlanEditor() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
       {/* Sidebar - Mapa do Plano */}
       <div className="lg:col-span-1">
-        <MapaPlano 
-          sections={sections} 
+        <MapaPlano
+          sections={sections}
           currentSection={currentSectionId}
           onSelectSection={setCurrentSectionId}
         />
@@ -82,12 +84,27 @@ export default function PlanEditor() {
 
       {/* Main Content - Editor */}
       <div className="lg:col-span-2">
-        <EditorPlano 
-          planId={planId} 
-          sections={editorSections}
-          currentSectionId={currentSectionId}
-          onSectionChange={setCurrentSectionId}
-        />
+        {currentSectionId === "planoFinanceiro" ? (
+          <SecaoFinanceira
+            planId={planId}
+            initialData={(plan?.data as any)?.planoFinanceiro}
+            onSave={async (data) => {
+              // Salvar dados financeiros
+              await updateSectionMutation.mutateAsync({
+                id: planId,
+                section: "planoFinanceiro" as any,
+                data: data as any,
+              });
+            }}
+          />
+        ) : (
+          <EditorPlano
+            planId={planId}
+            sections={editorSections}
+            currentSectionId={currentSectionId}
+            onSectionChange={setCurrentSectionId}
+          />
+        )}
       </div>
     </div>
   );

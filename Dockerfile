@@ -1,24 +1,28 @@
-FROM node:20-alpine
+﻿FROM node:20-alpine
 
-# Instalar pnpm
 RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copiar arquivos de dependência
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 
-# Instalar dependências
 RUN pnpm install --frozen-lockfile
 
-# Copiar código-fonte
 COPY . .
 
-# Buildar aplicação
+ARG VITE_APP_ID=pea-plan-docker-test
+ARG VITE_OAUTH_PORTAL_URL=http://localhost:8080
+ARG VITE_ANALYTICS_ENDPOINT=
+ARG VITE_ANALYTICS_WEBSITE_ID=
+
+ENV VITE_APP_ID=$VITE_APP_ID
+ENV VITE_OAUTH_PORTAL_URL=$VITE_OAUTH_PORTAL_URL
+ENV VITE_ANALYTICS_ENDPOINT=$VITE_ANALYTICS_ENDPOINT
+ENV VITE_ANALYTICS_WEBSITE_ID=$VITE_ANALYTICS_WEBSITE_ID
+
 RUN pnpm run build
 
-# Expor porta
 EXPOSE 3000
 
-# Iniciar em produção
 CMD ["pnpm", "run", "start"]

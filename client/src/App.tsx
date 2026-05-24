@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import PlanEditor from "./pages/PlanEditor";
 import FinancialAnalysis from "./pages/FinancialAnalysis";
+import ClassManagement from "./pages/ClassManagement";
 import Navigation from "./components/Navigation";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/plano/:id"} component={PlanEditor} />
       <Route path={"/financial-analysis"} component={FinancialAnalysis} />
+      <Route path={"/turmas"} component={ClassManagement} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

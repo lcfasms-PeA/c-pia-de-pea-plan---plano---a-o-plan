@@ -1,4 +1,5 @@
-import "dotenv/config";
+﻿import "dotenv/config";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -7,6 +8,9 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { sdk } from "./sdk";
+import { getSessionCookieOptions } from "./cookies";
+import { upsertUser } from "../db";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -36,6 +40,30 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+
+  app.get("/api/dev-login", async (req, res) => {
+    const openId = "dev-admin-local";
+    const name = "Administrador Local";
+
+    await upsertUser({
+      openId,
+      name,
+      email: "admin@pea-plan.local",
+      loginMethod: "dev",
+      role: "admin_geral",
+      lastSignedIn: new Date(),
+    });
+
+    const sessionToken = await sdk.createSessionToken(openId, { name });
+    const cookieOptions = getSessionCookieOptions(req);
+
+    res.cookie(COOKIE_NAME, sessionToken, {
+      ...cookieOptions,
+      maxAge: ONE_YEAR_MS,
+    });
+
+    res.redirect("/dashboard");
+  });
   // tRPC API
   app.use(
     "/api/trpc",
@@ -64,3 +92,4 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
