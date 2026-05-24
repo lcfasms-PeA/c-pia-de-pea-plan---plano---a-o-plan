@@ -1,0 +1,75 @@
+allowAnonymousTelemetry: false
+analyticsDisabled: true
+disableLocalTelemetry: true
+name: 'PeA-Plan Config'
+version: '1.0.0'
+schema: 'v1'
+systemMessage: |
+  Você é um assistente de codificação avançado seguindo as regras de governança de software do PeA-Plan.
+  Princípios: Clean Code, SOLID, OWASP Top 10.
+  Fluxo CHAT-PLAN-AGENT: sempre planeje antes de agir, divida tarefas complexas em etapas.
+  Mantenha as respostas concisas e orientadas à solução.
+models:
+  - title: DeepSeek R1 (1.5b)
+    provider: ollama
+    model: deepseek-r1:1.5b
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Você é um assistente de codificação do PeA-Plan.
+      Siga as regras de Clean Code, SOLID e OWASP Top 10.
+      Use o fluxo CHAT-PLAN-AGENT: planeje antes de implementar.
+  - title: Qwen 2.5 Coder (7b) - Terminal
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Você é um assistente de terminal do PeA-Plan.
+      Siga as regras de Clean Code, SOLID e OWASP Top 10.
+      Use o fluxo CHAT-PLAN-AGENT: planeje antes de executar comandos.
+      Mantenha as respostas em formato de comando ou explicação técnica.
+  - title: Qwen 2.5 Coder (OpenCode Mode)
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Modo OpenCode: você deve gerar código aberto seguindo as melhores práticas.
+      Siga PeA-Plan: Clean Code, SOLID, OWASP Top 10.
+      Fluxo CHAT-PLAN-AGENT: planeje antes de escrever código.
+  - title: LLaMA 3.1 (8b)
+    provider: ollama
+    model: llama3.1:8b
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Você é um assistente de codificação do PeA-Plan baseado em LLaMA.
+      Siga Clean Code, SOLID, OWASP Top 10.
+      Use o fluxo CHAT-PLAN-AGENT.
+  - title: Hermes Agent (8b) - Memória
+    provider: ollama
+    model: hermes-agent:8b
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Você é um agente com gerenciamento de memória do PeA-Plan.
+      Siga Clean Code, SOLID, OWASP Top 10.
+      Use o fluxo CHAT-PLAN-AGENT.
+      Gerencie o estado da conversa para manter coerência.
+      Registre informações importantes em formato Markdown para memória de longo prazo.
+  - title: Gemma 4
+    provider: ollama
+    model: gemma4:latest
+    apiBase: http://localhost:11434
+    systemMessage: |
+      Você é um assistente de codificação do PeA-Plan baseado em Gemma.
+      Siga Clean Code, SOLID, OWASP Top 10.
+      Use o fluxo CHAT-PLAN-AGENT.
+tabAutocompleteModel:
+  title: Qwen 2.5 Coder (1.5b) - Autocomplete
+  provider: ollama
+  model: qwen2.5-coder:1.5b
+  apiBase: http://localhost:11434
+embeddingsProvider:
+  provider: ollama
+  model: nomic-embed-text:latest
+  apiBase: http://localhost:11434
+contextProviders:
+  - name: file
+  - name: codebase

@@ -8,7 +8,7 @@
 
 ## 🎯 Status Geral
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  PeA-PLAN WEB DEPLOYMENT STATUS                     │
 ├─────────────────────────────────────────────────────┤
@@ -64,7 +64,7 @@
 
 Neste audit foram criados 3 novos arquivos para facilitar:
 
-```
+```text
 Projeto Root/
 ├─ DEPLOYMENT_PLAN.md      ✅ (NOVO - Plano detalhado)
 ├─ QUICK_START.md          ✅ (NOVO - Guia rápido de 10 passos)
@@ -96,7 +96,8 @@ Projeto Root/
 ## 🛣️ ROADMAP PARA PRODUÇÃO
 
 ### Fase 1: Configuração (1-2h) 🔴 CRÍTICA
-```
+
+```text
 [ ] Criar .env com credenciais reais
 [ ] Verificar MySQL disponível
 [ ] Instalar dependências (pnpm install)
@@ -104,7 +105,8 @@ Projeto Root/
 ```
 
 ### Fase 2: Validação Local (1-2h) 🔴 CRÍTICA
-```
+
+```text
 [ ] Rodar testes (pnpm run test)
 [ ] Iniciar dev (pnpm run dev)
 [ ] Testar login no navegador
@@ -112,14 +114,16 @@ Projeto Root/
 ```
 
 ### Fase 3: Build Produção (1h) 🔴 CRÍTICA
-```
+
+```text
 [ ] Compilar (pnpm run build)
 [ ] Testar produção (pnpm run start)
 [ ] Verificar assets estáticos
 ```
 
 ### Fase 4: Deploy (2-3h) 🟡 MÉDIA
-```
+
+```text
 [ ] Escolher plataforma (Heroku/AWS/Azure/VPS)
 [ ] Configurar CI/CD
 [ ] Deploy inicial
@@ -127,7 +131,8 @@ Projeto Root/
 ```
 
 ### Fase 5-6: Completude (1-2 semanas) 🟡 MÉDIA
-```
+
+```text
 [ ] Componentes de gamificação
 [ ] Chat em tempo real
 [ ] Testes E2E
@@ -140,7 +145,7 @@ Projeto Root/
 
 ### Matriz de Severidade
 
-```
+```text
          BAIXA      MÉDIA      ALTA
          IMPACTO    IMPACTO    IMPACTO
 ALTA     🟢         🟡         🔴
@@ -168,7 +173,8 @@ PROB     Leve       Leve       Médio
 ## 💰 ESTIMATIVA DE CUSTO/TEMPO
 
 ### Desenvolvimento Local
-```
+
+```text
 Atividade                    Tempo    Custo Dev   
 ────────────────────────────────────────────────
 Preparação inicial          15 min    Nenhum
@@ -181,7 +187,8 @@ SUBTOTAL (LOCAL)           ~1h30     Nenhum
 ```
 
 ### Deploy em Produção
-```
+
+```text
 Atividade                    Tempo    Custo Estimado
 ────────────────────────────────────────────────────
 Escolher plataforma         30 min    $0
@@ -194,7 +201,8 @@ SUBTOTAL (PRODUÇÃO)        ~4-5h     $50-200/mês
 ```
 
 ### Completude 100%
-```
+
+```text
 Atividade                    Tempo    Custo Dev
 ────────────────────────────────────────────────
 Componentes gamificação      6h       Salário padrão
@@ -212,29 +220,34 @@ SUBTOTAL (COMPLETUDE)       ~18h     ~2-3 dias dev
 ### ✅ FAZER AGORA (Próximas 2 horas)
 
 1. **Criar `.env` com credenciais reais**
+
    ```bash
    cp .env.example .env
    # Editar e preencher valores
    ```
 
 2. **Instalar e testar banco**
+
    ```bash
    docker run -d -e MYSQL_ROOT_PASSWORD=senha123 -p 3306:3306 mysql:8.0
    # ou usar MySQL local/RDS
    ```
 
 3. **Instalar dependências**
+
    ```bash
    pnpm install
    pnpm run check
    ```
 
 4. **Rodar migrations**
+
    ```bash
    pnpm run db:push
    ```
 
 5. **Validar localmente**
+
    ```bash
    pnpm run test   # Deve passar todos os 82
    pnpm run dev    # Deve rodar em localhost:3000
@@ -258,18 +271,21 @@ SUBTOTAL (COMPLETUDE)       ~18h     ~2-3 dias dev
 
 ## 📞 PRÓXIMOS PASSOS
 
-### Para o Gerente de Projeto:
+### Para o Gerente de Projeto
+
 1. Priorizar obtenção de credenciais (OAuth, LLM, API keys)
 2. Confirmar disponibilidade de MySQL (local, Docker, ou cloud)
 3. Alocar desenvolvedor para ~4h de setup/validação
 
-### Para o Desenvolvedor:
+### Para o Desenvolvedor
+
 1. Ler `QUICK_START.md` (5 min)
 2. Criar `.env` com credenciais (15 min)
 3. Executar os 10 passos de quick-start (~30 min)
 4. Reportar sucesso ou bloqueadores
 
-### Para o DevOps:
+### Para o DevOps
+
 1. Preparar plataforma de deploy (Heroku/AWS/Azure/VPS)
 2. Configurar CI/CD (GitHub Actions)
 3. Preparar SSL/TLS
@@ -279,7 +295,7 @@ SUBTOTAL (COMPLETUDE)       ~18h     ~2-3 dias dev
 
 ## 📈 MÉTRICAS DE SUCESSO
 
-```
+```text
 ✅ LOCAL DEV (Target: 1h30)
   [ ] pnpm install completa sem erros
   [ ] pnpm run test: 82/82 passando
@@ -317,7 +333,7 @@ SUBTOTAL (COMPLETUDE)       ~18h     ~2-3 dias dev
 
 ## 🎓 CONCLUSÃO
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │                                                     │
 │  O PROJETO ESTÁ 60% COMPLETO E PRONTO PARA:       │

@@ -10,20 +10,23 @@ Docker não está instalado ou não está no PATH do sistema.
 
 ### Opção 1: Docker Desktop (Recomendado)
 
-**Passo 1: Baixar**
-1. Acesse: https://www.docker.com/products/docker-desktop
+#### Passo 1: Baixar
+
+1. Acesse: [Docker Desktop](https://www.docker.com/products/docker-desktop)
 2. Clique em "Download for Windows"
 3. Escolha a versão para seu Windows:
-   - **Windows 11/10 Pro/Enterprise**: Use versão padrão
-   - **Windows 10 Home**: Use versão WSL2
+   - **Windows 11/10 Pro/Enterprise**: use a versão padrão
+   - **Windows 10 Home**: use a versão WSL2
 
-**Passo 2: Instalar**
+#### Passo 2: Instalar
+
 1. Execute o instalador
 2. Siga os passos (aceite termos padrão)
 3. Se pedido, ative WSL2 (Windows Subsystem for Linux)
 4. Reinicie o computador se necessário
 
-**Passo 3: Verificar**
+#### Passo 3: Verificar
+
 ```bash
 docker --version
 # Esperado: Docker version XX.X.X, build XXXXX
@@ -33,7 +36,7 @@ docker --version
 
 Se seu Windows é Home Edition, use WSL2:
 
-1. Instale WSL2: https://learn.microsoft.com/pt-br/windows/wsl/install
+1. Instale WSL2: [documentação do WSL2](https://learn.microsoft.com/pt-br/windows/wsl/install)
 2. Instale Docker Desktop para Windows
 3. Ative WSL2 no Docker Desktop (Preferências → Resources → WSL 2)
 
@@ -64,18 +67,20 @@ cd "caminho/para/pea-plan"
 docker-compose up --build
 ```
 
-Aguarde 2-3 minutos e acesse: **http://localhost:3000**
+Aguarde 2-3 minutos e acesse: [http://localhost:3000](http://localhost:3000)
 
 ---
 
 ## ⚠️ Se Tiver Problemas
 
 ### Docker Desktop não inicia
+
 - Verifique se Virtualization está habilitada no BIOS
 - Reinicie o computador
 - Desinstale e reinstale completamente
 
 ### WSL2 erro
+
 ```bash
 # Atualize WSL2
 wsl --update
@@ -83,6 +88,7 @@ wsl --set-default-version 2
 ```
 
 ### Permissões no Windows
+
 - Execute PowerShell como Administrador
 - Tente novamente
 
@@ -114,7 +120,7 @@ wsl --set-default-version 2
 2. ✅ Terminal: `docker --version`
 3. ✅ Volte ao projeto PeA-Plan
 4. ✅ Execute: `docker-compose up --build`
-5. ✅ Acesse: http://localhost:3000
+5. ✅ Acesse: [http://localhost:3000](http://localhost:3000)
 
 ---
 

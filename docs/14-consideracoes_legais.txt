@@ -1,0 +1,15 @@
+﻿===================================================================
+MANUAL DE OPERAÇÃO - PARTE 14: CONSIDERAÇÕES LEGAIS E REGULAMENTAÇÕES
+===================================================================
+
+1. COMPLIANCE E PRIVACIDADE DE DADOS:
+   - Todo o armazenamento local de e-mails, telefones e documentos (ID)
+     deve seguir diretrizes rígidas de segurança cibernética.
+   - Os hashes Bcrypt aplicados às senhas garantem a impossibilidade de
+     leitura reversa em caso de inspeção física do banco de dados.
+
+2. DIREITOS AUTORAIS E LICENCIAMENTO:
+   - Este software e suas especificações de engenharia contidas no plano
+     PeA-Plan pertencem exclusivamente ao escopo de propriedade do projeto.
+   - Uso restrito ao ambiente de homologação local offline.
+===================================================================

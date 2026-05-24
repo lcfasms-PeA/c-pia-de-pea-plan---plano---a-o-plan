@@ -1,0 +1,15 @@
+﻿===================================================================
+MANUAL DE OPERAÇÃO - PARTE 11: INTERFACE GRÁFICA PRINCIPAL (GUI)
+===================================================================
+
+1. REQUISITOS VISUAIS DA TELA:
+   - Painel Superior: Exibição de Status do Sistema Operacional Local.
+   - Painel Central: Formulário de Cadastro Internacional de Clientes.
+   - Painel Lateral: Logger de Eventos de Auditoria e Sessões Criptografadas.
+
+2. INSTRUÇÕES TEXTUAIS DE OPERAÇÃO:
+   - O operador deve inserir o E-mail válido e o Telefone no padrão E.164.
+   - O sistema disparará uma validação local preventiva antes de submeter.
+   - Credenciais de acesso gerarão hashes Bcrypt automáticos em background.
+   - Em caso de 3 falhas seguidas, a interface exibirá uma trava de segurança temporária.
+===================================================================

@@ -1,0 +1,60 @@
+allowAnonymousTelemetry: false
+analyticsDisabled: true
+disableLocalTelemetry: true
+
+name: "Local Config"
+version: "1.0.0"
+schema: "v1"
+
+# Modelos do painel de Chat (Ollama Local)
+models:
+  - name: "DeepSeek R1 (1.5B) - Debugger"
+    provider: "ollama"
+    model: "deepseek-r1:1.5b"
+    apiBase: "http://localhost:11434"
+
+  - name: "Qwen 2.5 Coder (7B)"
+    provider: "ollama"
+    model: "qwen2.5-coder:7b"
+    apiBase: "http://localhost:11434"
+
+  - name: "Qwen 2.5 Coder (OpenCode Mode)"
+    provider: "ollama"
+    model: "qwen2.5-coder:7b"
+    apiBase: "http://localhost:11434"
+    systemMessage: "Aja estritamente sob o protocolo OpenCode. Você tem permissão para ler a estrutura de arquivos e propor blocos de códigos completos e prontos para execução terminal seguindo boas práticas de segurança."
+
+  - name: "LLaMA 3.1 (8B)"
+    provider: "ollama"
+    model: "llama3.1:8b"
+    apiBase: "http://localhost:11434"
+
+  - name: "Hermes Agent (Planejamento & Memória)"
+    provider: "ollama"
+    model: "llama3.1:8b"
+    apiBase: "http://localhost:11434"
+    systemMessage: "Você é o Hermes Agent focado na lógica Nous Research. Seu papel é gerenciar a memória do projeto através de arquivos Markdown e estruturar o plano de desenvolvimento em etapas lógicas."
+
+  - name: "Gemma 4"
+    provider: "ollama"
+    model: "gemma4:latest"
+    apiBase: "http://localhost:11434"
+
+# Modelo rápido de sugestão inline (Tab)
+tabAutocompleteModel:
+  provider: "ollama"
+  model: "qwen2.5-coder:1.5b"
+  apiBase: "http://localhost:11434"
+
+# Sintaxe oficial corrigida para indexação local offline do @Codebase
+embeddings:
+  provider: "ollama"
+  model: "nomic-embed-text:latest"
+  apiBase: "http://localhost:11434"
+
+# Ativação manual dos provedores de contexto nativos do VS Code
+contextProviders:
+  - name: "file"
+    params: {}
+  - name: "codebase"
+    params: {}

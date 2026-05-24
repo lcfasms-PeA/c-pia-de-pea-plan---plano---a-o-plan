@@ -296,7 +296,7 @@ SEMANA 2-3 (Opcional - Completude 100%)
 
 ### ✅ Pré-requisitos
 - [ ] Projeto clonado localmente
-- [ ] Node.js v18+ instalado
+- [ ] Node.js v22+ instalado
 - [ ] pnpm instalado globalmente
 - [ ] Acesso a credenciais (OAuth, LLM, etc)
 
@@ -337,6 +337,15 @@ SEMANA 2-3 (Opcional - Completude 100%)
 
 ---
 
+## Instalações suportadas
+
+- **Windows local**: `pnpm run install:windows`
+- **Linux/macOS local ou VPS**: `pnpm run install:linux`
+- **Verificação de ambiente**: `pnpm run install:prompt`
+- **Docker**: use `docker compose up -d` quando o `docker-compose.yml` estiver configurado
+- **PWA**: após iniciar a aplicação, instale pelo navegador ou use o prompt de instalação do app
+
+
 ## Comandos Rápidos
 
 ```bash
@@ -344,9 +353,14 @@ SEMANA 2-3 (Opcional - Completude 100%)
 cp .env.example .env          # Criar .env
 code .env                     # Editar variáveis
 
-# Instalação
+# Instalação local (Windows/Linux)
+pnpm run install:windows      # Executar instalador Windows
+pnpm run install:linux        # Executar instalador Linux/macOS
+pnpm run install:prompt       # Verificar ambiente de instalação
+
+# Instalação manual
 pnpm install                  # Instalar deps
-pnpm run db:push             # Criar banco
+pnpm run db:push              # Criar banco
 
 # Desenvolvimento
 pnpm run dev                  # Iniciar dev
@@ -358,7 +372,17 @@ pnpm run build                # Compilar
 pnpm run start                # Iniciar prod
 ```
 
+
+## Lista das Alterações
+
+- Atualizado o fluxo de instalação para Windows e Linux/macOS com `install.bat` e `install.sh`.
+- Adicionados scripts de instalador no `package.json`: `install:windows`, `install:linux` e `install:prompt`.
+- Incluído `scripts/check-installer.js` para checar pré-requisitos sem executar o instalador completo.
+- Documentação de instalação revisada em `QUICK_START.md`, `README_DOCUMENTATION.md` e `INTEGRATING_PWA_INSTALLERS.md`.
+- Verificada a integração do PWA e a consistência do service worker/manifest com a estrutura atual do frontend.
+- Confirmado que `pnpm exec vite build` gera `dist/public` e que o backend serve esses arquivos em produção.
+- Validado o processo de banco de dados: criação/copiar `.env`, `pnpm run db:push`, e testes básicos após setup.
 ---
 
-**Última atualização**: 16 de maio de 2026  
-**Versão**: 1.0
+**Última atualização**: 20 de maio de 2026  
+**Versão**: 1.1

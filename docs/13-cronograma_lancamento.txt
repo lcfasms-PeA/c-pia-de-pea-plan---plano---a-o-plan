@@ -1,0 +1,16 @@
+﻿===================================================================
+MANUAL DE OPERAÇÃO - PARTE 13: CRONOGRAMA DE LANÇAMENTO
+===================================================================
+
+1. FASE 1 - MAPEAMENTO E INFRAESTRUTURA (CONCLUÍDA):
+   - Alinhamento do ambiente local offline e barramentos do Ollama.
+   - Geração dos módulos base do Cliente, Autenticação e Lógica.
+
+2. FASE 2 - INTEGRAÇÃO E AUDITORIA DE TESTES (CONCLUÍDA AGORA):
+   - Homologação de testes unitários via biblioteca nativa unittest.
+   - Validação de assinaturas contra injeções e ataques de força bruta.
+
+3. FASE 3 - INTERFACE E ARQUIVAMENTO (PRÓXIMA FASE):
+   - Vinculação dos módulos com os requisitos visuais da tela (Parte 11).
+   - Homologação do build final estável do ecossistema local.
+===================================================================

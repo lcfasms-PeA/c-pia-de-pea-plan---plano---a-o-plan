@@ -1,0 +1,12 @@
+{
+  "default": true,
+  "MD013": { "line_length": 400, "tab_width": 4, "code_blocks": false },
+  "MD022": false,
+  "MD026": false,
+  "MD029": false,
+  "MD031": false,
+  "MD032": false,
+  "MD040": false,
+  "MD041": false,
+  "MD060": { "style": "padded" }
+}

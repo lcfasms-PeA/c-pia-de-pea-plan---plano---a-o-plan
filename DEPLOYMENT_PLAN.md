@@ -89,7 +89,7 @@
 **Severidade**: 🟡 MÉDIA  
 **Impacto**: Comunicação é apenas mock, sem Socket.io
 
-**Situação**: 
+**Situação**:
 - ❌ Socket.io não configurado
 - ✓ Endpoints tRPC para mensagens existem
 - ✓ Schema de banco pronto
@@ -264,7 +264,8 @@ pnpm run start
 | 1.4 | Criar `.env` com valores reais | Dev | 15 min | 🔴 CRÍTICA |
 | 1.5 | Verificar MySQL disponível | DevOps | 30 min | 🔴 CRÍTICA |
 
-**Saída Esperada**: 
+**Saída Esperada**:
+
 - ✓ `.env` configurado e testável
 - ✓ MySQL rodando e acessível
 - ✓ Todas as credenciais obtidas
@@ -281,6 +282,7 @@ pnpm run start
 | 2.4 | Seed de dados iniciais (opcional) | Dev | 30 min | 🟢 LEVE |
 
 **Saída Esperada**:
+
 - ✓ Dependências instaladas
 - ✓ 17 tabelas criadas no MySQL
 - ✓ Schema validado
@@ -300,6 +302,7 @@ pnpm run start
 | 3.6 | Documentar achados | QA | 30 min | 🟢 LEVE |
 
 **Saída Esperada**:
+
 - ✓ Servidor rodando em `localhost:3000`
 - ✓ Login funcionando
 - ✓ CRUD de planos testado
@@ -362,7 +365,8 @@ pnpm run start
 
 ## 📊 **RESUMO EXECUTIVO**
 
-### ✅ O que PODE rodar agora:
+### ✅ O que PODE rodar agora
+
 - ✓ Backend tRPC (50+ endpoints)
 - ✓ Autenticação e permissões
 - ✓ Dashboards (Admin, Professor, Aluno)
@@ -371,14 +375,16 @@ pnpm run start
 - ✓ Gamificação (API pronta)
 - ✓ Exportação PDF/Excel/Word
 
-### ⚠️ O que FALTA para web:
+### ⚠️ O que FALTA para web
+
 1. **CRÍTICO**: Variáveis de ambiente (`.env`)
 2. **CRÍTICO**: Banco de dados MySQL inicializado
 3. **CRÍTICO**: Dependências instaladas
 4. **MÉDIO**: Componentes de gamificação UI
 5. **MÉDIO**: Chat em tempo real
 
-### 📈 Estimativa:
+### 📈 Estimativa
+
 - **Dias até web funcional**: 1-2 dias (fase 1-4)
 - **Dias até 100% completo**: 2-3 semanas (incluindo fase 6)
 
