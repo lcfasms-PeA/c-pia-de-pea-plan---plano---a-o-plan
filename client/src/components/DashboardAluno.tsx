@@ -1,23 +1,87 @@
+import { useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Zap, Target, Award, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { skipToken } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+
+const ACHIEVEMENT_ICONS: Record<string, string> = {
+  first_section: "🎯",
+  all_sections: "🏆",
+  swot_master: "🧠",
+  canvas_master: "🎨",
+  financial_master: "💰",
+  team_leader: "👑",
+  class_champion: "🥇",
+  speedrunner: "⚡",
+  perfectionist: "✨",
+  collaborator: "🤝",
+};
+
+function calculatePlanProgress(planData: Record<string, any> | null | undefined) {
+  if (!planData) return 0;
+
+  const sections = [
+    planData.descricaoEmpresa,
+    planData.produtosServicos,
+    planData.estruturaOrganizacional,
+    planData.planoMarketing,
+    planData.planoOperacional,
+    planData.estruturaCapitalizacao,
+    planData.planoFinanceiro,
+    planData.sumarioExecutivo,
+  ];
+
+  const completedSections = sections.filter((section) => {
+    if (!section || typeof section !== "object") return false;
+
+    return Object.values(section).some((value) => {
+      if (Array.isArray(value)) return value.length > 0;
+      return value !== null && value !== undefined && value !== "";
+    });
+  }).length;
+
+  return Math.round((completedSections / sections.length) * 100);
+}
 
 export default function DashboardAluno() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const { data: scoreData, isLoading: scoreLoading } = trpc.gamification.getScore.useQuery();
   const { data: plansData, isLoading: plansLoading } = trpc.businessPlans.list.useQuery();
-  const { data: achievementsData, isLoading: achievementsLoading } = trpc.gamification.getAchievements.useQuery();
-  const { data: rankingData, isLoading: rankingLoading } = trpc.gamification.getRanking.useQuery({ classId: 1 });
+  const { data: summaryData, isLoading: summaryLoading } = trpc.gamification.getSummary.useQuery();
+  const rankingClassId = plansData?.find((plan) => plan.classId)?.classId;
+  const { data: rankingData, isLoading: rankingLoading } = trpc.gamification.getRanking.useQuery(
+    rankingClassId ? { classId: rankingClassId } : skipToken
+  );
+  const createPlanMutation = trpc.businessPlans.create.useMutation();
+
+  const plansWithProgress = useMemo(
+    () => (plansData || []).map((plan) => ({ ...plan, progress: calculatePlanProgress(plan.data as Record<string, any>) })),
+    [plansData]
+  );
 
   const userStats = {
     level: scoreData?.level || 1,
     xp: scoreData?.xp || 0,
     xpNext: scoreData?.xpNext || 1000,
     points: scoreData?.points || 0,
-    achievements: achievementsData?.length || 0,
-    rank: rankingData ? rankingData.findIndex((r) => r.userId === user?.id) + 1 : 0,
+    achievements: summaryData?.totalAchievements || 0,
+    rank: rankingData?.find((r) => r.userId === user?.id)?.position || 0,
+  };
+
+  const handleCreatePlan = async () => {
+    try {
+      const title = `Plano ${new Date().toLocaleDateString("pt-BR")}`;
+      const result = await createPlanMutation.mutateAsync({ title, classId: rankingClassId || undefined });
+      navigate(`/plano/${result.id}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao criar plano";
+      toast.error(message);
+    }
   };
 
   return (
@@ -28,7 +92,9 @@ export default function DashboardAluno() {
           <h1 className="text-3xl font-bold">Dashboard Aluno</h1>
           <p className="text-gray-600 mt-2">Bem-vindo, {user?.name}</p>
         </div>
-        <Button>+ Novo Plano</Button>
+        <Button onClick={handleCreatePlan} disabled={createPlanMutation.isPending}>
+          {createPlanMutation.isPending ? "Criando..." : "+ Novo Plano"}
+        </Button>
       </div>
 
       {/* Gamificação */}
@@ -90,7 +156,7 @@ export default function DashboardAluno() {
             <>
               <Award className="w-8 h-8 text-purple-600 mx-auto mb-2" />
               <p className="text-gray-600 text-sm">Ranking</p>
-              <p className="text-3xl font-bold">#{userStats.rank}</p>
+              <p className="text-3xl font-bold">{userStats.rank > 0 ? `#${userStats.rank}` : "-"}</p>
             </>
           )}
         </Card>
@@ -103,8 +169,8 @@ export default function DashboardAluno() {
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
-        ) : plansData && plansData.length > 0 ? (
-          plansData.map((plan) => (
+        ) : plansWithProgress.length > 0 ? (
+          plansWithProgress.map((plan) => (
             <Card key={plan.id} className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -113,19 +179,19 @@ export default function DashboardAluno() {
                     Criado em {new Date(plan.createdAt).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
-                <Button variant="default">Continuar</Button>
+                <Button variant="default" onClick={() => navigate(`/plano/${plan.id}`)}>Continuar</Button>
               </div>
 
               {/* Progress */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Progresso</span>
-                  <span className="font-medium">~65%</span>
+                  <span className="font-medium">{plan.progress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all"
-                    style={{ width: `65%` }}
+                    style={{ width: `${plan.progress}%` }}
                   />
                 </div>
               </div>
@@ -140,32 +206,26 @@ export default function DashboardAluno() {
 
       {/* Conquistas */}
       <Card className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Conquistas</h2>
-        {achievementsLoading ? (
+        <h2 className="text-2xl font-bold mb-4">Próximas Conquistas</h2>
+        {summaryLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
-        ) : achievementsData && achievementsData.length > 0 ? (
+        ) : summaryData && summaryData.nextAchievements.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {achievementsData.map((achievement, index) => (
+            {summaryData.nextAchievements.map((achievement) => (
               <div
                 key={achievement.id}
-                className={`p-4 rounded-lg text-center transition-all ${
-                  index < 3
-                    ? "bg-yellow-50 border-2 border-yellow-300"
-                    : "bg-gray-100 border-2 border-gray-300 opacity-50"
-                }`}
+                className="p-4 rounded-lg text-center transition-all bg-gray-100 border-2 border-gray-300"
               >
-                <p className="text-4xl mb-2">🏆</p>
-                <p className="text-sm font-medium">Conquista {achievement.id}</p>
-                {index >= 3 && (
-                  <p className="text-xs text-gray-600 mt-1">Bloqueado</p>
-                )}
+                <p className="text-4xl mb-2">{ACHIEVEMENT_ICONS[achievement.id] || achievement.icone || "🏆"}</p>
+                <p className="text-sm font-medium">{achievement.nome}</p>
+                <p className="text-xs text-gray-600 mt-1">{achievement.descricao}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">Nenhuma conquista encontrada</p>
+          <p className="text-gray-500 text-center py-8">Nenhuma conquista pendente encontrada</p>
         )}
       </Card>
 
@@ -173,8 +233,9 @@ export default function DashboardAluno() {
       <Card className="p-6 bg-blue-50 border-blue-200">
         <h3 className="font-bold text-blue-900 mb-2">💡 Dica do Dia</h3>
         <p className="text-sm text-blue-800">
-          Complete a seção de análise financeira para ganhar 100 pontos e desbloquear a conquista
-          "Financista"!
+          {summaryData?.nextAchievements[0]
+            ? `Próximo foco: ${summaryData.nextAchievements[0].nome} - ${summaryData.nextAchievements[0].criterio}.`
+            : "Continue avançando no seu plano para subir de nível e ganhar mais pontos."}
         </p>
       </Card>
     </div>

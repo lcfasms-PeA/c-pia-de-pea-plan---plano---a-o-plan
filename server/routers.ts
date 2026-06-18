@@ -1061,9 +1061,17 @@ export const appRouter = router({
         const scores = await db
           .select()
           .from(userScores)
-          .where(eq(userScores.userId, studentIds[0]));
+          .where(inArray(userScores.userId, studentIds));
+
+        const rankingUsers = await db
+          .select({
+            id: users.id,
+            name: users.name,
+          })
+          .from(users)
+          .where(inArray(users.id, studentIds));
         
-        return scores.sort((a, b) => (b.points || 0) - (a.points || 0)).slice(0, 10);
+        return calculateRanking(scores as any, rankingUsers).slice(0, 10);
       }),
 
     addPoints: protectedProcedure

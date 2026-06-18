@@ -19,9 +19,7 @@ export default function Ranking({ classId }: RankingProps) {
     return ranking
       .map((user, index) => ({
         ...user,
-        position: index + 1,
         medal: index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "",
-        userName: `Usuário ${user.id}`,
       }))
       .slice(0, 10);
   }, [ranking]);
@@ -47,7 +45,7 @@ export default function Ranking({ classId }: RankingProps) {
         ) : (
           rankedUsers.map((user) => (
             <div
-              key={user.id}
+              key={user.userId}
               className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow"
             >
               <div className="flex items-center gap-3 flex-1">

@@ -3,17 +3,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, BookOpen, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
 
 export default function DashboardProfessor() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const { data: classes, isLoading: classesLoading } = trpc.classes.list.useQuery();
-  const { data: enrollments, isLoading: enrollmentsLoading } = trpc.classes.getById.useQuery(
-    { id: classes?.[0]?.id || 0 },
-    { enabled: !!classes?.[0]?.id }
-  );
 
-  const totalStudents = classes?.length || 0;
-  const totalCompleted = Math.floor((totalStudents * 0.6) || 0);
+  const totalStudents = (classes || []).reduce(
+    (sum, classItem) => sum + (classItem.studentCount || 0),
+    0
+  );
+  const activeClasses = (classes || []).filter((classItem) => classItem.status === "Ativa").length;
 
   const stats = [
     {
@@ -29,8 +30,8 @@ export default function DashboardProfessor() {
       color: "text-green-600",
     },
     {
-      label: "Planos Completos",
-      value: classesLoading ? "..." : totalCompleted.toString(),
+      label: "Turmas Ativas",
+      value: classesLoading ? "..." : activeClasses.toString(),
       icon: CheckCircle,
       color: "text-purple-600",
     },
@@ -44,7 +45,7 @@ export default function DashboardProfessor() {
           <h1 className="text-3xl font-bold">Dashboard Professor</h1>
           <p className="text-gray-600 mt-2">Bem-vindo, {user?.name}</p>
         </div>
-        <Button>+ Criar Turma</Button>
+        <Button onClick={() => navigate("/turmas")}>+ Criar Turma</Button>
       </div>
 
       {/* Stats */}
@@ -79,42 +80,24 @@ export default function DashboardProfessor() {
                 <div>
                   <h3 className="text-lg font-bold">{classItem.name}</h3>
                   <p className="text-sm text-gray-600">
-                    ~{Math.floor(Math.random() * 30) + 15} alunos • ~{Math.floor(Math.random() * 15) + 5} planos
-                    completos
+                    {classItem.studentCount || 0} aluno(s) matriculado(s)
                   </p>
                 </div>
-                <Button variant="outline">Gerenciar</Button>
+                <Button variant="outline" onClick={() => navigate("/turmas")}>Gerenciar</Button>
               </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progresso da Turma</span>
-                  <span className="font-medium">~60%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{
-                      width: `60%`,
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Alunos Status */}
               <div className="mt-4 grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">~10</p>
-                  <p className="text-sm text-gray-600">Completos</p>
+                  <p className="text-2xl font-bold text-green-600">{classItem.studentCount || 0}</p>
+                  <p className="text-sm text-gray-600">Matriculados</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-600">~5</p>
-                  <p className="text-sm text-gray-600">Em Progresso</p>
+                  <p className="text-2xl font-bold text-yellow-600">{classItem.startDate ? "Sim" : "-"}</p>
+                  <p className="text-sm text-gray-600">Com início</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">2</p>
-                  <p className="text-sm text-gray-600">Não Iniciados</p>
+                  <p className="text-2xl font-bold text-red-600">{classItem.status || "-"}</p>
+                  <p className="text-sm text-gray-600">Status</p>
                 </div>
               </div>
             </Card>
