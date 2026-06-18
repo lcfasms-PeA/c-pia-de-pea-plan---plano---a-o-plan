@@ -4,8 +4,91 @@ import { trpc } from "@/lib/trpc";
 import MapaPlano from "@/components/MapaPlano";
 import EditorPlano from "@/components/EditorPlano";
 import SecaoFinanceira from "@/components/SecaoFinanceira";
+import CanvasEditor from "@/components/CanvasEditor";
+import RiskMatrix from "@/components/RiskMatrix";
+import TimelineGantt from "@/components/TimelineGantt";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
+
+const TEXT_SECTION_FIELDS: Record<string, string[]> = {
+  descricaoEmpresa: [
+    "nomeEmpresa",
+    "nomeFantasia",
+    "descricaoNegocio",
+    "missao",
+    "visao",
+    "valores",
+    "dataFundacao",
+    "cnpj",
+    "endereco",
+    "telefone",
+    "email",
+    "website",
+    "setor",
+    "segmento",
+  ],
+  produtosServicos: ["garantia", "posVenda"],
+  estruturaOrganizacional: ["totalFuncionarios", "organograma", "planosCapacitacao"],
+  planoMarketing: [
+    "publicoAlvo",
+    "posicionamento",
+    "estrategiaPreco",
+    "estrategiaPromocao",
+    "estrategiaDistribuicao",
+    "comunicacao",
+    "orcamentoMarketing",
+  ],
+  planoOperacional: [
+    "localizacao",
+    "infraestrutura",
+    "materiaPrima",
+    "qualidade",
+    "sustentabilidade",
+  ],
+  estruturaCapitalizacao: ["capitalSocial", "investimentoInicial"],
+  planoFinanceiro: ["taxaDesconto", "taxaJuros"],
+  sumarioExecutivo: [
+    "resumoExecutivo",
+    "oportunidade",
+    "solucao",
+    "mercado",
+    "financeiro",
+    "proximos12Meses",
+  ],
+};
+
+function calculateObjectProgress(sectionData: Record<string, unknown> | undefined) {
+  if (!sectionData) return { progress: 0, completed: false };
+
+  const values = Object.values(sectionData);
+  if (values.length === 0) return { progress: 0, completed: false };
+
+  const filledCount = values.filter((value) => {
+    if (Array.isArray(value)) {
+      return value.length > 0;
+    }
+
+    return value !== null && value !== undefined && value !== "";
+  }).length;
+
+  const progress = Math.round((filledCount / values.length) * 100);
+  return { progress, completed: progress >= 80 };
+}
+
+function calculateArrayProgress(items: unknown[] | undefined) {
+  const progress = items && items.length > 0 ? 100 : 0;
+  return { progress, completed: progress >= 80 };
+}
+
+function buildTextSectionFields(sectionId: string, sectionData: Record<string, unknown> | undefined) {
+  const templateFields = TEXT_SECTION_FIELDS[sectionId] || [];
+
+  return templateFields.reduce<Record<string, string>>((accumulator, fieldName) => {
+    const rawValue = sectionData?.[fieldName];
+    accumulator[fieldName] = rawValue === null || rawValue === undefined ? "" : String(rawValue);
+    return accumulator;
+  }, {});
+}
 
 export default function PlanEditor() {
   const [, params] = useRoute("/plano/:id");
@@ -54,21 +137,47 @@ export default function PlanEditor() {
     );
   }
 
-  const sections = [
-    { id: "descricaoEmpresa", title: "Descrição da Empresa", progress: 0, completed: false },
-    { id: "produtosServicos", title: "Produtos e Serviços", progress: 0, completed: false },
-    { id: "estruturaOrganizacional", title: "Estrutura Organizacional", progress: 0, completed: false },
-    { id: "planoMarketing", title: "Plano de Marketing", progress: 0, completed: false },
-    { id: "planoOperacional", title: "Plano Operacional", progress: 0, completed: false },
-    { id: "estruturaCapitalizacao", title: "Estrutura de Capitalização", progress: 0, completed: false },
-    { id: "planoFinanceiro", title: "Plano Financeiro", progress: 0, completed: false },
-    { id: "sumarioExecutivo", title: "Sumário Executivo", progress: 0, completed: false },
+  const planData = (plan.data as Record<string, any>) || {};
+  const progressSections = progress?.sections || [];
+
+  const baseSections = [
+    { id: "descricaoEmpresa", title: "Descrição da Empresa" },
+    { id: "produtosServicos", title: "Produtos e Serviços" },
+    { id: "estruturaOrganizacional", title: "Estrutura Organizacional" },
+    { id: "planoMarketing", title: "Plano de Marketing" },
+    { id: "planoOperacional", title: "Plano Operacional" },
+    { id: "estruturaCapitalizacao", title: "Estrutura de Capitalização" },
+    { id: "planoFinanceiro", title: "Plano Financeiro" },
+    { id: "sumarioExecutivo", title: "Sumário Executivo" },
   ];
 
-  const editorSections = sections.map((s) => ({
+  const sections = [
+    ...baseSections.map((section, index) => ({
+      ...section,
+      progress: progressSections[index]?.percentage ?? calculateObjectProgress(planData[section.id]).progress,
+      completed: progressSections[index]?.completed ?? calculateObjectProgress(planData[section.id]).completed,
+    })),
+    {
+      id: "canvas",
+      title: "Business Model Canvas",
+      ...calculateObjectProgress(planData.canvas),
+    },
+    {
+      id: "cronogramaProjeto",
+      title: "Cronograma do Projeto",
+      ...calculateArrayProgress(planData.planoOperacional?.cronograma),
+    },
+    {
+      id: "analiseRiscos",
+      title: "Análise de Risco",
+      ...calculateArrayProgress(planData.sumarioExecutivo?.riscos),
+    },
+  ];
+
+  const editorSections = baseSections.map((s) => ({
     id: s.id,
     title: s.title,
-    fields: {},
+    fields: buildTextSectionFields(s.id, planData[s.id]),
   }));
 
   return (
@@ -96,6 +205,21 @@ export default function PlanEditor() {
                 data: data as any,
               });
             }}
+          />
+        ) : currentSectionId === "canvas" ? (
+          <CanvasEditor
+            planId={planId}
+            initialData={planData.canvas}
+          />
+        ) : currentSectionId === "cronogramaProjeto" ? (
+          <TimelineGantt
+            planId={planId}
+            initialTasks={planData.planoOperacional?.cronograma}
+          />
+        ) : currentSectionId === "analiseRiscos" ? (
+          <RiskMatrix
+            planId={planId}
+            initialRisks={planData.sumarioExecutivo?.riscos}
           />
         ) : (
           <EditorPlano
