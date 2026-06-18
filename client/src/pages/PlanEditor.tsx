@@ -6,6 +6,7 @@ import EditorPlano from "@/components/EditorPlano";
 import SecaoFinanceira from "@/components/SecaoFinanceira";
 import CanvasEditor from "@/components/CanvasEditor";
 import RiskMatrix from "@/components/RiskMatrix";
+import SWOTEditor from "@/components/SWOTEditor";
 import TimelineGantt from "@/components/TimelineGantt";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -78,6 +79,15 @@ function calculateObjectProgress(sectionData: Record<string, unknown> | undefine
 function calculateArrayProgress(items: unknown[] | undefined) {
   const progress = items && items.length > 0 ? 100 : 0;
   return { progress, completed: progress >= 80 };
+}
+
+function mapSwotInitialData(swotData: Record<string, any> | undefined) {
+  return {
+    strengths: (swotData?.forcas || []).map((item: { descricao?: string }) => item.descricao || ""),
+    weaknesses: (swotData?.fraquezas || []).map((item: { descricao?: string }) => item.descricao || ""),
+    opportunities: (swotData?.oportunidades || []).map((item: { descricao?: string }) => item.descricao || ""),
+    threats: (swotData?.ameacas || []).map((item: { descricao?: string }) => item.descricao || ""),
+  };
 }
 
 function buildTextSectionFields(sectionId: string, sectionData: Record<string, unknown> | undefined) {
@@ -163,6 +173,16 @@ export default function PlanEditor() {
       ...calculateObjectProgress(planData.canvas),
     },
     {
+      id: "analiseSWOT",
+      title: "Análise SWOT",
+      ...calculateArrayProgress([
+        ...(planData.swot?.forcas || []),
+        ...(planData.swot?.fraquezas || []),
+        ...(planData.swot?.oportunidades || []),
+        ...(planData.swot?.ameacas || []),
+      ]),
+    },
+    {
       id: "cronogramaProjeto",
       title: "Cronograma do Projeto",
       ...calculateArrayProgress(planData.planoOperacional?.cronograma),
@@ -210,6 +230,11 @@ export default function PlanEditor() {
           <CanvasEditor
             planId={planId}
             initialData={planData.canvas}
+          />
+        ) : currentSectionId === "analiseSWOT" ? (
+          <SWOTEditor
+            planId={planId}
+            initialData={mapSwotInitialData(planData.swot)}
           />
         ) : currentSectionId === "cronogramaProjeto" ? (
           <TimelineGantt

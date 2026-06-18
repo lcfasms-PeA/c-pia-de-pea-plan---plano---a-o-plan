@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { toast } from "sonner";
 
 interface SWOTData {
   strengths: string[];
@@ -161,6 +162,14 @@ export default function SWOTEditor({ planId, initialData }: SWOTEditorProps) {
   };
 
   const saveSWOTMutation = trpc.strategic.swot.save.useMutation();
+  const { data: swotAnalysis, refetch: refetchAnalysis } = trpc.strategic.swot.analise.useQuery(
+    { planId },
+    { enabled: !!planId }
+  );
+  const { data: recommendations, refetch: refetchRecommendations } = trpc.strategic.swot.recomendacoes.useQuery(
+    { planId },
+    { enabled: !!planId }
+  );
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -172,8 +181,11 @@ export default function SWOTEditor({ planId, initialData }: SWOTEditorProps) {
         oportunidades: swotData.opportunities.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
         ameacas: swotData.threats.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
       });
+      await Promise.all([refetchAnalysis(), refetchRecommendations()]);
+      toast.success("Análise SWOT salva com sucesso!");
     } catch (error) {
-      console.error("Erro ao salvar SWOT:", error);
+      const message = error instanceof Error ? error.message : "Erro ao salvar SWOT";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -253,6 +265,57 @@ export default function SWOTEditor({ planId, initialData }: SWOTEditorProps) {
           ))}
         </div>
       </Card>
+
+      {(swotAnalysis || (recommendations && recommendations.length > 0)) && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <h3 className="text-lg font-bold mb-4">Estratégias Derivadas</h3>
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="font-semibold text-green-700 mb-2">Forças × Oportunidades</p>
+                <ul className="space-y-1 list-disc pl-5">
+                  {(swotAnalysis?.forcasOportunidades || []).map((item, index) => (
+                    <li key={`fo-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-blue-700 mb-2">Forças × Ameaças</p>
+                <ul className="space-y-1 list-disc pl-5">
+                  {(swotAnalysis?.forcasAmeacas || []).map((item, index) => (
+                    <li key={`fa-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-amber-700 mb-2">Fraquezas × Oportunidades</p>
+                <ul className="space-y-1 list-disc pl-5">
+                  {(swotAnalysis?.fraquezasOportunidades || []).map((item, index) => (
+                    <li key={`fo2-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-red-700 mb-2">Fraquezas × Ameaças</p>
+                <ul className="space-y-1 list-disc pl-5">
+                  {(swotAnalysis?.fraquezasAmeacas || []).map((item, index) => (
+                    <li key={`fa2-${index}`}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <h3 className="text-lg font-bold mb-4">Recomendações</h3>
+            <ul className="space-y-3 list-disc pl-5 text-sm">
+              {(recommendations || []).map((item, index) => (
+                <li key={`rec-${index}`}>{item}</li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
