@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Save, Loader2, AlertTriangle, AlertCircle } from "lucide-react";
-// import { trpc } from "@/lib/trpc";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface Risk {
   id: string;
@@ -18,14 +19,6 @@ interface RiskMatrixProps {
   planId: number;
   initialRisks?: Risk[];
 }
-
-// Mock para testes - remover quando backend estiver pronto
-const useMockRiskMutation = () => ({
-  mutateAsync: async (data: any) => {
-    console.log("Salvando risco:", data);
-    return { success: true };
-  },
-});
 
 const PROBABILITY_LABELS = {
   1: "Muito Baixa",
@@ -56,8 +49,7 @@ export default function RiskMatrix({ planId, initialRisks = [] }: RiskMatrixProp
   const [selectedRisk, setSelectedRisk] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Mock mutation para testes
-  const riskMutation = useMockRiskMutation();
+  const riskMutation = trpc.strategic.risks.save.useMutation();
 
   const handleAddRisk = () => {
     const newRisk: Risk = {
@@ -83,11 +75,14 @@ export default function RiskMatrix({ planId, initialRisks = [] }: RiskMatrixProp
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Salvar riscos (mock por enquanto)
-      console.log("Salvando riscos:", risks);
-      // TODO: Implementar endpoint de risco no backend
+      const result = await riskMutation.mutateAsync({
+        planId,
+        riscos: risks,
+      });
+      toast.success(`Riscos salvos com sucesso! ${result.analysis.riscosAltos.length} risco(s) alto(s) identificado(s).`);
     } catch (error) {
-      console.error("Erro ao salvar riscos:", error);
+      const message = error instanceof Error ? error.message : "Erro ao salvar riscos";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

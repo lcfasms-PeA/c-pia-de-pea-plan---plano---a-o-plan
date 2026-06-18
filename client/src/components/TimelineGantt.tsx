@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Save, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -48,6 +50,7 @@ const getMonthName = (date: Date) => {
 };
 
 export default function TimelineGantt({ planId, initialTasks = [] }: TimelineGanttProps) {
+  const timelineMutation = trpc.strategic.timeline.save.useMutation();
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -96,10 +99,14 @@ export default function TimelineGantt({ planId, initialTasks = [] }: TimelineGan
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      console.log("Salvando cronograma:", tasks);
-      // TODO: Implementar endpoint de cronograma no backend
+      await timelineMutation.mutateAsync({
+        planId,
+        tarefas: tasks,
+      });
+      toast.success("Cronograma salvo com sucesso!");
     } catch (error) {
-      console.error("Erro ao salvar cronograma:", error);
+      const message = error instanceof Error ? error.message : "Erro ao salvar cronograma";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

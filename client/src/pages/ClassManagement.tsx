@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import ClassForm from '@/components/ClassForm';
 import ClassList from '@/components/ClassList';
 import ClassStudents from '@/components/ClassStudents';
@@ -17,6 +16,25 @@ interface EditingClass {
   status?: string;
 }
 
+interface ClassListItem {
+  id: number;
+  name: string;
+  enrollmentType: string;
+  startDate?: Date;
+  endDate?: Date;
+  status: string;
+  studentCount?: number;
+}
+
+const formatDateForInput = (date?: Date) => {
+  if (!date) return undefined;
+
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return undefined;
+
+  return parsedDate.toISOString().split('T')[0];
+};
+
 export default function ClassManagement() {
   const [activeTab, setActiveTab] = useState<'list' | 'create'>('list');
   const [editingClass, setEditingClass] = useState<EditingClass | null>(null);
@@ -26,24 +44,26 @@ export default function ClassManagement() {
   const [bulkEnrollClassName, setBulkEnrollClassName] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const handleEditClass = (classId: number) => {
-    // TODO: buscar dados completos da turma para edição
+  const handleEditClass = (classItem: ClassListItem) => {
     setEditingClass({
-      id: classId,
-      name: '',
-      enrollmentType: '',
+      id: classItem.id,
+      name: classItem.name,
+      enrollmentType: classItem.enrollmentType,
+      startDate: formatDateForInput(classItem.startDate),
+      endDate: formatDateForInput(classItem.endDate),
+      status: classItem.status,
     });
     setActiveTab('create');
   };
 
-  const handleManageStudents = (classId: number, className: string) => {
-    setSelectedClassId(classId);
-    setSelectedClassName(className);
+  const handleManageStudents = (classItem: ClassListItem) => {
+    setSelectedClassId(classItem.id);
+    setSelectedClassName(classItem.name);
   };
 
-  const handleBulkEnroll = (classId: number, className: string) => {
-    setBulkEnrollClassId(classId);
-    setBulkEnrollClassName(className);
+  const handleBulkEnroll = (classItem: ClassListItem) => {
+    setBulkEnrollClassId(classItem.id);
+    setBulkEnrollClassName(classItem.name);
   };
 
   const handleFormSuccess = () => {
@@ -90,13 +110,8 @@ export default function ClassManagement() {
                 <ClassList
                   key={refreshKey}
                   onEdit={handleEditClass}
-                  onManageStudents={(classId: number) => {
-                    // Buscar nome da turma
-                    handleManageStudents(classId, 'Turma');
-                  }}
-                  onBulkEnroll={(classId: number) => {
-                    handleBulkEnroll(classId, 'Turma');
-                  }}
+                  onManageStudents={handleManageStudents}
+                  onBulkEnroll={handleBulkEnroll}
                   onRefresh={() => setRefreshKey(prev => prev + 1)}
                 />
               </CardContent>
@@ -179,8 +194,13 @@ export default function ClassManagement() {
           }
         }}
         onBulkEnroll={() => {
-          if (selectedClassId) {
-            handleBulkEnroll(selectedClassId, selectedClassName);
+          if (selectedClassId && selectedClassName) {
+            handleBulkEnroll({
+              id: selectedClassId,
+              name: selectedClassName,
+              enrollmentType: '',
+              status: 'Ativa',
+            });
           }
         }}
       />

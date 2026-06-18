@@ -23,11 +23,12 @@ interface ClassItemProps {
     startDate?: Date;
     endDate?: Date;
     status: string;
+    studentCount?: number;
   };
   studentCount: number;
-  onEdit?: (classId: number) => void;
-  onManageStudents?: (classId: number) => void;
-  onBulkEnroll?: (classId: number) => void;
+  onEdit?: (classItem: ClassItemProps["class"]) => void;
+  onManageStudents?: (classItem: ClassItemProps["class"]) => void;
+  onBulkEnroll?: (classItem: ClassItemProps["class"]) => void;
   onDelete?: (classId: number) => void;
   onRefresh?: () => void;
 }
@@ -118,7 +119,7 @@ function ClassCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onEdit?.(classItem.id)}
+              onClick={() => onEdit?.(classItem)}
               className="flex-1"
             >
               <Edit className="w-4 h-4 mr-1" />
@@ -127,7 +128,7 @@ function ClassCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onManageStudents?.(classItem.id)}
+              onClick={() => onManageStudents?.(classItem)}
               className="flex-1"
             >
               <Users className="w-4 h-4 mr-1" />
@@ -136,7 +137,7 @@ function ClassCard({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onBulkEnroll?.(classItem.id)}
+              onClick={() => onBulkEnroll?.(classItem)}
               className="flex-1"
             >
               <Upload className="w-4 h-4 mr-1" />
@@ -178,9 +179,33 @@ function ClassCard({
 }
 
 interface ClassListProps {
-  onEdit?: (classId: number) => void;
-  onManageStudents?: (classId: number) => void;
-  onBulkEnroll?: (classId: number) => void;
+  onEdit?: (classItem: {
+    id: number;
+    name: string;
+    enrollmentType: string;
+    startDate?: Date;
+    endDate?: Date;
+    status: string;
+    studentCount?: number;
+  }) => void;
+  onManageStudents?: (classItem: {
+    id: number;
+    name: string;
+    enrollmentType: string;
+    startDate?: Date;
+    endDate?: Date;
+    status: string;
+    studentCount?: number;
+  }) => void;
+  onBulkEnroll?: (classItem: {
+    id: number;
+    name: string;
+    enrollmentType: string;
+    startDate?: Date;
+    endDate?: Date;
+    status: string;
+    studentCount?: number;
+  }) => void;
   onRefresh?: () => void;
 }
 
@@ -222,7 +247,7 @@ export default function ClassList({
           <ClassCard
             key={classItem.id}
             class={classItem}
-            studentCount={0} // TODO: contar alunos
+            studentCount={classItem.studentCount || 0}
             onEdit={onEdit}
             onManageStudents={onManageStudents}
             onBulkEnroll={onBulkEnroll}

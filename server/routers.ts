@@ -1192,6 +1192,200 @@ export const appRouter = router({
           return gerarRecomendacoes(swot);
         }),
     }),
+
+    canvas: router({
+      save: studentProcedure
+        .input(
+          z.object({
+            planId: z.number(),
+            keyPartners: z.string(),
+            keyActivities: z.string(),
+            keyResources: z.string(),
+            valueProposition: z.string(),
+            customerRelationships: z.string(),
+            channels: z.string(),
+            customerSegments: z.string(),
+            costStructure: z.string(),
+            revenueStreams: z.string(),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
+
+          const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.planId)).limit(1);
+          if (plan.length === 0) throw new Error("Plan not found");
+
+          const toItems = (value: string) =>
+            value
+              .split(/\r?\n/)
+              .map((item) => item.trim())
+              .filter(Boolean);
+
+          const canvas = {
+            keyPartners: input.keyPartners,
+            keyActivities: input.keyActivities,
+            keyResources: input.keyResources,
+            valueProposition: input.valueProposition,
+            customerRelationships: input.customerRelationships,
+            customerRelationship: input.customerRelationships,
+            channels: input.channels,
+            customerSegments: input.customerSegments,
+            costStructure: input.costStructure,
+            revenueStreams: input.revenueStreams,
+            parceirosChave: {
+              id: "parceirosChave",
+              titulo: "Parceiros Chave",
+              descricao: input.keyPartners,
+              items: toItems(input.keyPartners),
+            },
+            atividadesChave: {
+              id: "atividadesChave",
+              titulo: "Atividades Chave",
+              descricao: input.keyActivities,
+              items: toItems(input.keyActivities),
+            },
+            recursosChave: {
+              id: "recursosChave",
+              titulo: "Recursos Chave",
+              descricao: input.keyResources,
+              items: toItems(input.keyResources),
+            },
+            propuestaValor: {
+              id: "propuestaValor",
+              titulo: "Proposta de Valor",
+              descricao: input.valueProposition,
+              items: toItems(input.valueProposition),
+            },
+            relacionamentoClientes: {
+              id: "relacionamentoClientes",
+              titulo: "Relacionamento com Clientes",
+              descricao: input.customerRelationships,
+              items: toItems(input.customerRelationships),
+            },
+            canaisDistribuicao: {
+              id: "canaisDistribuicao",
+              titulo: "Canais de Distribuicao",
+              descricao: input.channels,
+              items: toItems(input.channels),
+            },
+            segmentosClientes: {
+              id: "segmentosClientes",
+              titulo: "Segmentos de Clientes",
+              descricao: input.customerSegments,
+              items: toItems(input.customerSegments),
+            },
+            estruturaCustos: {
+              id: "estruturaCustos",
+              titulo: "Estrutura de Custos",
+              descricao: input.costStructure,
+              items: toItems(input.costStructure),
+            },
+            fontesReceita: {
+              id: "fontesReceita",
+              titulo: "Fontes de Receita",
+              descricao: input.revenueStreams,
+              items: toItems(input.revenueStreams),
+            },
+          };
+
+          const currentData = (plan[0].data || {}) as any;
+          const updatedData = {
+            ...currentData,
+            canvas,
+          };
+
+          await db.update(businessPlans).set({ data: updatedData, updatedAt: new Date() }).where(eq(businessPlans.id, input.planId));
+
+          return {
+            success: true,
+            validation: validarCanvas(canvas as any),
+          };
+        }),
+    }),
+
+    risks: router({
+      save: studentProcedure
+        .input(
+          z.object({
+            planId: z.number(),
+            riscos: z.array(
+              z.object({
+                id: z.string(),
+                descricao: z.string(),
+                probabilidade: z.number(),
+                impacto: z.number(),
+                mitigacao: z.string().optional(),
+              })
+            ),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
+
+          const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.planId)).limit(1);
+          if (plan.length === 0) throw new Error("Plan not found");
+
+          const currentData = (plan[0].data || {}) as any;
+          const updatedData = {
+            ...currentData,
+            sumarioExecutivo: {
+              ...(currentData.sumarioExecutivo || {}),
+              riscos: input.riscos,
+            },
+          };
+
+          await db.update(businessPlans).set({ data: updatedData, updatedAt: new Date() }).where(eq(businessPlans.id, input.planId));
+
+          return {
+            success: true,
+            analysis: analisarRiscos(input.riscos as any),
+          };
+        }),
+    }),
+
+    timeline: router({
+      save: studentProcedure
+        .input(
+          z.object({
+            planId: z.number(),
+            tarefas: z.array(
+              z.object({
+                id: z.string(),
+                titulo: z.string(),
+                descricao: z.string(),
+                dataInicio: z.string(),
+                dataFim: z.string(),
+                responsavel: z.string(),
+                status: z.enum(["nao_iniciada", "em_progresso", "concluida", "atrasada"]),
+                progresso: z.number(),
+                dependencias: z.array(z.string()),
+              })
+            ),
+          })
+        )
+        .mutation(async ({ input }) => {
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
+
+          const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.planId)).limit(1);
+          if (plan.length === 0) throw new Error("Plan not found");
+
+          const currentData = (plan[0].data || {}) as any;
+          const updatedData = {
+            ...currentData,
+            planoOperacional: {
+              ...(currentData.planoOperacional || {}),
+              cronograma: input.tarefas,
+            },
+          };
+
+          await db.update(businessPlans).set({ data: updatedData, updatedAt: new Date() }).where(eq(businessPlans.id, input.planId));
+
+          return { success: true };
+        }),
+    }),
   }),
 
   // ============ MÃ“DULO FINANCEIRO ============

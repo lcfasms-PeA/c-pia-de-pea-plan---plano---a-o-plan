@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface CanvasData {
   keyPartners: string;
@@ -22,6 +24,7 @@ interface CanvasEditorProps {
 }
 
 export default function CanvasEditor({ planId, initialData }: CanvasEditorProps) {
+  const saveMutation = trpc.strategic.canvas.save.useMutation();
   const [canvasData, setCanvasData] = useState<CanvasData>(
     initialData || {
       keyPartners: "",
@@ -48,8 +51,21 @@ export default function CanvasEditor({ planId, initialData }: CanvasEditorProps)
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // TODO: Implementar endpoint canvas.save no backend
-      console.log("Canvas salvo:", canvasData);
+      const result = await saveMutation.mutateAsync({
+        planId,
+        ...canvasData,
+      });
+      if (!result.validation.valido && result.validation.avisos.length > 0) {
+        toast.warning(`Canvas salvo com ${result.validation.avisos.length} aviso(s).`);
+      } else {
+        toast.success("Canvas salvo com sucesso!");
+      }
+      if (result.validation.erros.length > 0) {
+        toast.error(result.validation.erros[0]);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar canvas";
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
