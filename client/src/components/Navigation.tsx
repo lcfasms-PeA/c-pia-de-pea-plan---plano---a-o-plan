@@ -23,8 +23,8 @@ export default function Navigation() {
     { label: "Análise Financeira", href: "/financial-analysis", icon: BarChart3 },
   ];
 
-  if (user?.role === "admin_geral" || user?.role === "coordenador") {
-    navItems.push({ label: "Usuários", href: "/users", icon: Users });
+  if (user?.role === "admin_geral" || user?.role === "admin" || user?.role === "coordenador" || user?.role === "professor") {
+    navItems.push({ label: "Turmas", href: "/turmas", icon: Users });
   }
 
   return (

@@ -1,39 +1,151 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FinancialDashboard } from '@/components/FinancialDashboard';
 import { Loader2, Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Mock data para demonstração
-const MOCK_FINANCIAL_DATA = {
-  vpl: 125000,
-  tir: 0.28,
-  payback: 2.5,
-  fluxoCaixa: Array.from({ length: 12 }, (_, i) => ({
-    mes: i + 1,
-    valor: Math.random() * 50000 + 10000,
-  })),
-  dre: {
-    receita: 500000,
-    custos: 300000,
-    lucro: 200000,
-  },
-  indicadores: {
-    liquidezCorrente: 1.8,
-    endividamento: 0.35,
-    margemLucro: 0.4,
-    roe: 0.25,
-    roa: 0.18,
-  },
+import { trpc } from '@/lib/trpc';
+
+interface FinancialPlanData {
+  investimentoInicial: number;
+  taxaDesconto: number;
+  receitas: number;
+  custos: number;
+  despesas: number;
+  juros: number;
+  aliquotaImposto: number;
+  fluxosCaixa: Array<{ mes: number; valor: number }>;
+}
+
+const EMPTY_FINANCIAL_DATA: FinancialPlanData = {
+  investimentoInicial: 0,
+  taxaDesconto: 0.1,
+  receitas: 0,
+  custos: 0,
+  despesas: 0,
+  juros: 0,
+  aliquotaImposto: 0.15,
+  fluxosCaixa: [],
 };
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
 
 export default function FinancialAnalysis() {
   const { user, loading } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const { data: plansData, isLoading: plansLoading, refetch: refetchPlans } = trpc.businessPlans.list.useQuery();
+  const exportPdfMutation = trpc.businessPlans.exportPDF.useMutation();
+
+  useEffect(() => {
+    if (!selectedPlanId && plansData && plansData.length > 0) {
+      setSelectedPlanId(String(plansData[0].id));
+    }
+  }, [plansData, selectedPlanId]);
+
+  const selectedPlan = useMemo(
+    () => plansData?.find((plan) => String(plan.id) === selectedPlanId) || null,
+    [plansData, selectedPlanId]
+  );
+
+  const financialData = useMemo<FinancialPlanData>(() => {
+    const planFinancialData = (selectedPlan?.data as any)?.planoFinanceiro;
+    if (!planFinancialData) return EMPTY_FINANCIAL_DATA;
+
+    return {
+      ...EMPTY_FINANCIAL_DATA,
+      ...planFinancialData,
+      fluxosCaixa: Array.isArray(planFinancialData.fluxosCaixa) ? planFinancialData.fluxosCaixa : [],
+    };
+  }, [selectedPlan]);
+
+  const hasFinancialData =
+    financialData.investimentoInicial > 0 &&
+    financialData.fluxosCaixa.length > 0;
+
+  const vplQuery = trpc.financeiro.calcularVPL.useQuery(
+    {
+      fluxosCaixa: financialData.fluxosCaixa.map((item) => item.valor),
+      investimentoInicial: financialData.investimentoInicial,
+      taxaDesconto: financialData.taxaDesconto,
+    },
+    { enabled: hasFinancialData }
+  );
+
+  const tirQuery = trpc.financeiro.calcularTIR.useQuery(
+    {
+      fluxosCaixa: financialData.fluxosCaixa.map((item) => item.valor),
+      investimentoInicial: financialData.investimentoInicial,
+    },
+    { enabled: hasFinancialData }
+  );
+
+  const paybackQuery = trpc.financeiro.calcularPayback.useQuery(
+    {
+      fluxosCaixa: financialData.fluxosCaixa.map((item) => item.valor),
+      investimentoInicial: financialData.investimentoInicial,
+    },
+    { enabled: hasFinancialData }
+  );
+
+  const dreQuery = trpc.financeiro.calcularDRE.useQuery(
+    {
+      receitas: financialData.receitas,
+      custos: financialData.custos,
+      despesas: financialData.despesas,
+      juros: financialData.juros,
+      aliquotaImposto: financialData.aliquotaImposto,
+    },
+    { enabled: Boolean(selectedPlan) }
+  );
+
+  const dashboardData = useMemo(() => {
+    const dre = dreQuery.data;
+    const lucroLiquido = dre?.lucroLiquido || 0;
+    const receitaTotal = financialData.receitas || 0;
+    const totalCustos = financialData.custos + financialData.despesas + financialData.juros;
+    const margemLucro = receitaTotal > 0 ? lucroLiquido / receitaTotal : 0;
+    const liquidezCorrente = totalCustos > 0 ? receitaTotal / totalCustos : 0;
+    const endividamento = receitaTotal > 0 ? totalCustos / receitaTotal : 0;
+    const roe = financialData.investimentoInicial > 0 ? lucroLiquido / financialData.investimentoInicial : 0;
+    const totalAtivos = financialData.investimentoInicial + totalCustos;
+    const roa = totalAtivos > 0 ? lucroLiquido / totalAtivos : 0;
+
+    return {
+      vpl: vplQuery.data || 0,
+      tir: tirQuery.data || 0,
+      payback: paybackQuery.data || 0,
+      fluxoCaixa: financialData.fluxosCaixa,
+      dre: {
+        receita: receitaTotal,
+        custos: totalCustos,
+        lucro: lucroLiquido,
+      },
+      indicadores: {
+        liquidezCorrente,
+        endividamento,
+        margemLucro,
+        roe,
+        roa,
+      },
+    };
+  }, [dreQuery.data, financialData, paybackQuery.data, tirQuery.data, vplQuery.data]);
+
+  const isBusy =
+    plansLoading ||
+    exportPdfMutation.isPending ||
+    vplQuery.isLoading ||
+    tirQuery.isLoading ||
+    paybackQuery.isLoading ||
+    dreQuery.isLoading;
 
   if (loading) {
     return (
@@ -56,28 +168,41 @@ export default function FinancialAnalysis() {
   }
 
   const handleExportReport = async () => {
-    setIsLoading(true);
+    if (!selectedPlan) {
+      toast.error('Selecione um plano para exportar');
+      return;
+    }
+
     try {
-      // Simular download de relatório
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const result = await exportPdfMutation.mutateAsync({ id: selectedPlan.id });
+      const byteCharacters = atob(result.buffer);
+      const byteNumbers = Array.from(byteCharacters, (char) => char.charCodeAt(0));
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.fileName;
+      link.click();
+      URL.revokeObjectURL(url);
       toast.success('Relatório exportado com sucesso!');
-    } catch (error) {
+    } catch {
       toast.error('Erro ao exportar relatório');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleRefreshData = async () => {
-    setIsLoading(true);
     try {
-      // Simular atualização de dados
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await Promise.all([
+        refetchPlans(),
+        vplQuery.refetch(),
+        tirQuery.refetch(),
+        paybackQuery.refetch(),
+        dreQuery.refetch(),
+      ]);
       toast.success('Dados atualizados!');
-    } catch (error) {
+    } catch {
       toast.error('Erro ao atualizar dados');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -89,15 +214,27 @@ export default function FinancialAnalysis() {
           <div>
             <h1 className="text-3xl font-bold">Análise Financeira</h1>
             <p className="text-muted-foreground mt-1">
-              Visualize indicadores financeiros, fluxo de caixa e cenários
+              Visualize indicadores financeiros reais dos planos cadastrados
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
+            <Select value={selectedPlanId || undefined} onValueChange={setSelectedPlanId}>
+              <SelectTrigger className="w-full md:w-72">
+                <SelectValue placeholder="Selecione um plano" />
+              </SelectTrigger>
+              <SelectContent>
+                {(plansData || []).map((plan) => (
+                  <SelectItem key={plan.id} value={String(plan.id)}>
+                    {plan.title || `Plano #${plan.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
               onClick={handleRefreshData}
-              disabled={isLoading}
+              disabled={isBusy}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
@@ -105,13 +242,33 @@ export default function FinancialAnalysis() {
             <Button
               size="sm"
               onClick={handleExportReport}
-              disabled={isLoading}
+              disabled={isBusy || !selectedPlan}
             >
               <Download className="w-4 h-4 mr-2" />
               Exportar
             </Button>
           </div>
         </div>
+
+        {!plansLoading && (!plansData || plansData.length === 0) && (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                Nenhum plano encontrado para análise financeira.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedPlan && !hasFinancialData && (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground">
+                Este plano ainda não possui dados suficientes no plano financeiro para análise.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs de navegação */}
         <Tabs defaultValue="dashboard" className="w-full">
@@ -123,10 +280,12 @@ export default function FinancialAnalysis() {
 
           {/* Dashboard Principal */}
           <TabsContent value="dashboard" className="space-y-6">
-            <FinancialDashboard
-              data={MOCK_FINANCIAL_DATA}
-              planName="Meu Plano de Negócios"
-            />
+            {selectedPlan && hasFinancialData ? (
+              <FinancialDashboard
+                data={dashboardData}
+                planName={selectedPlan.title || `Plano #${selectedPlan.id}`}
+              />
+            ) : null}
           </TabsContent>
 
           {/* Detalhes */}
@@ -144,7 +303,7 @@ export default function FinancialAnalysis() {
                   <div className="p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-muted-foreground">VPL Calculado</p>
                     <p className="text-2xl font-bold text-blue-600">
-                      R$ {MOCK_FINANCIAL_DATA.vpl.toLocaleString('pt-BR')}
+                      {formatCurrency(dashboardData.vpl)}
                     </p>
                   </div>
                   <div className="space-y-2 text-sm">
@@ -153,7 +312,7 @@ export default function FinancialAnalysis() {
                       financeiramente viável e criará valor.
                     </p>
                     <p className="text-muted-foreground">
-                      Taxa de desconto utilizada: 10% a.a.
+                      Taxa de desconto utilizada: {(financialData.taxaDesconto * 100).toFixed(2)}% a.a.
                     </p>
                   </div>
                 </CardContent>
@@ -171,7 +330,7 @@ export default function FinancialAnalysis() {
                   <div className="p-4 bg-green-50 rounded-lg">
                     <p className="text-sm text-muted-foreground">TIR Calculada</p>
                     <p className="text-2xl font-bold text-green-600">
-                      {(MOCK_FINANCIAL_DATA.tir * 100).toFixed(2)}% a.a.
+                      {(dashboardData.tir * 100).toFixed(2)}% a.a.
                     </p>
                   </div>
                   <div className="space-y-2 text-sm">
@@ -180,7 +339,7 @@ export default function FinancialAnalysis() {
                       investimento. Compare com a taxa de desconto (10%).
                     </p>
                     <p className="text-muted-foreground">
-                      {MOCK_FINANCIAL_DATA.tir > 0.1
+                      {dashboardData.tir > financialData.taxaDesconto
                         ? 'TIR acima da taxa de desconto - Projeto viável'
                         : 'TIR abaixo da taxa de desconto - Projeto não viável'}
                     </p>
@@ -200,13 +359,13 @@ export default function FinancialAnalysis() {
                   <div className="p-4 bg-orange-50 rounded-lg">
                     <p className="text-sm text-muted-foreground">Payback</p>
                     <p className="text-2xl font-bold text-orange-600">
-                      {MOCK_FINANCIAL_DATA.payback.toFixed(1)} anos
+                      {dashboardData.payback.toFixed(1)} anos
                     </p>
                   </div>
                   <div className="space-y-2 text-sm">
                     <p>
                       <strong>Interpretação:</strong> O investimento será recuperado em
-                      aproximadamente {MOCK_FINANCIAL_DATA.payback.toFixed(1)} anos.
+                      aproximadamente {dashboardData.payback.toFixed(1)} anos.
                     </p>
                     <p className="text-muted-foreground">
                       Período aceitável para este tipo de negócio
@@ -228,14 +387,14 @@ export default function FinancialAnalysis() {
                     <div className="flex justify-between text-sm">
                       <span>Margem de Lucro</span>
                       <span className="font-bold">
-                        {(MOCK_FINANCIAL_DATA.indicadores.margemLucro * 100).toFixed(1)}%
+                        {(dashboardData.indicadores.margemLucro * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-green-500 h-2 rounded-full"
                         style={{
-                          width: `${Math.min(MOCK_FINANCIAL_DATA.indicadores.margemLucro * 100, 100)}%`,
+                          width: `${Math.min(dashboardData.indicadores.margemLucro * 100, 100)}%`,
                         }}
                       ></div>
                     </div>
@@ -245,14 +404,14 @@ export default function FinancialAnalysis() {
                     <div className="flex justify-between text-sm">
                       <span>ROE (Retorno sobre Patrimônio)</span>
                       <span className="font-bold">
-                        {(MOCK_FINANCIAL_DATA.indicadores.roe * 100).toFixed(1)}%
+                        {(dashboardData.indicadores.roe * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-500 h-2 rounded-full"
                         style={{
-                          width: `${Math.min(MOCK_FINANCIAL_DATA.indicadores.roe * 100, 100)}%`,
+                          width: `${Math.min(dashboardData.indicadores.roe * 100, 100)}%`,
                         }}
                       ></div>
                     </div>
@@ -262,14 +421,14 @@ export default function FinancialAnalysis() {
                     <div className="flex justify-between text-sm">
                       <span>ROA (Retorno sobre Ativos)</span>
                       <span className="font-bold">
-                        {(MOCK_FINANCIAL_DATA.indicadores.roa * 100).toFixed(1)}%
+                        {(dashboardData.indicadores.roa * 100).toFixed(1)}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-purple-500 h-2 rounded-full"
                         style={{
-                          width: `${Math.min(MOCK_FINANCIAL_DATA.indicadores.roa * 100, 100)}%`,
+                          width: `${Math.min(dashboardData.indicadores.roa * 100, 100)}%`,
                         }}
                       ></div>
                     </div>
@@ -308,7 +467,7 @@ export default function FinancialAnalysis() {
                             ></div>
                           </div>
                           <span className="w-20 text-sm font-bold text-right">
-                            {(MOCK_FINANCIAL_DATA.vpl * (1 + variation / 100)).toLocaleString('pt-BR')}
+                            {formatCurrency(dashboardData.vpl * (1 + variation / 100))}
                           </span>
                         </div>
                       ))}
@@ -333,7 +492,7 @@ export default function FinancialAnalysis() {
                             ></div>
                           </div>
                           <span className="w-20 text-sm font-bold text-right">
-                            {(MOCK_FINANCIAL_DATA.vpl * (1 - variation / 100)).toLocaleString('pt-BR')}
+                            {formatCurrency(dashboardData.vpl * (1 - variation / 100))}
                           </span>
                         </div>
                       ))}

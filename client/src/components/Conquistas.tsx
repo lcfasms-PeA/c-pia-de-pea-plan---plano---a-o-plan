@@ -19,13 +19,16 @@ const ACHIEVEMENT_ICONS: Record<string, string> = {
 
 export default function Conquistas() {
   const { data: achievements, isLoading } = trpc.gamification.getAchievements.useQuery();
+  const { data: summary, isLoading: summaryLoading } = trpc.gamification.getSummary.useQuery();
 
   const unlockedAchievements = useMemo(() => {
     if (!achievements) return [];
     return achievements || [];
   }, [achievements]);
 
-  if (isLoading) {
+  const nextAchievements = summary?.nextAchievements || [];
+
+  if (isLoading || summaryLoading) {
     return (
       <Card className="p-6">
         <div className="text-center text-gray-500">Carregando conquistas...</div>
@@ -41,8 +44,34 @@ export default function Conquistas() {
           <h2 className="text-2xl font-bold">Conquistas Desbloqueadas</h2>
         </div>
 
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-center">
+            <p className="text-3xl font-bold text-yellow-700">{unlockedAchievements.length}</p>
+            <p className="text-sm text-yellow-900">Desbloqueadas</p>
+          </div>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center">
+            <p className="text-3xl font-bold text-blue-700">{nextAchievements.length}</p>
+            <p className="text-sm text-blue-900">Próximas metas</p>
+          </div>
+        </div>
+
         {unlockedAchievements.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">Nenhuma conquista desbloqueada ainda</p>
+          <div className="space-y-4 py-2">
+            <p className="text-center text-gray-500">Nenhuma conquista desbloqueada ainda</p>
+            {nextAchievements.length > 0 && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-blue-900">Próximas conquistas sugeridas</p>
+                <div className="space-y-3">
+                  {nextAchievements.map((achievement) => (
+                    <div key={achievement.id} className="rounded-md bg-white p-3">
+                      <p className="font-medium">{achievement.nome}</p>
+                      <p className="text-sm text-gray-600">{achievement.criterio}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -61,9 +90,23 @@ export default function Conquistas() {
 
             <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm text-blue-800">
-                💡 <strong>Dica:</strong> Complete seções do plano para desbloquear novas conquistas!
+                💡 <strong>Dica:</strong> Você já desbloqueou {unlockedAchievements.length} conquista(s). Continue evoluindo para liberar as próximas.
               </p>
             </div>
+
+            {nextAchievements.length > 0 && (
+              <div className="rounded-lg border border-gray-200 p-4">
+                <p className="mb-3 text-sm font-semibold text-gray-900">Próximas conquistas</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {nextAchievements.map((achievement) => (
+                    <div key={achievement.id} className="rounded-md bg-gray-50 p-3">
+                      <p className="font-medium">{achievement.nome}</p>
+                      <p className="text-sm text-gray-600">{achievement.criterio}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </Card>

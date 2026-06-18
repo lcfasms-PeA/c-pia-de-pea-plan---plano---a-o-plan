@@ -3,9 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, BookOpen, BarChart3, Trophy, TrendingUp, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
 
 export default function DashboardAdmin() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const { data: usersList, isLoading: usersLoading } = trpc.users.list.useQuery();
   const { data: classesList, isLoading: classesLoading } = trpc.classes.list.useQuery();
   const { data: plansData, isLoading: plansLoading } = trpc.businessPlans.list.useQuery();
@@ -78,8 +80,8 @@ export default function DashboardAdmin() {
         <Card className="lg:col-span-2 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Usuários Recentes</h2>
-            <Button variant="outline" size="sm">
-              Ver Todos
+            <Button variant="outline" size="sm" onClick={() => navigate("/turmas")}>
+              Ver Turmas
             </Button>
           </div>
           {usersLoading ? (
@@ -110,17 +112,17 @@ export default function DashboardAdmin() {
         <Card className="p-6">
           <h2 className="text-xl font-bold mb-4">Ações Rápidas</h2>
           <div className="space-y-2">
-            <Button variant="default" className="w-full justify-start">
-              + Criar Instituição
+            <Button variant="default" className="w-full justify-start" onClick={() => navigate("/turmas")}>
+              + Criar Turma
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              + Adicionar Usuário
+            <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/turmas")}>
+              👥 Gerenciar Turmas
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              📊 Ver Relatórios
+            <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/financial-analysis")}>
+              📊 Análise Financeira
             </Button>
-            <Button variant="outline" className="w-full justify-start">
-              ⚙️ Configurações
+            <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/")}>
+              🏠 Ir para Home
             </Button>
           </div>
         </Card>

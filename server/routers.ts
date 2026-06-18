@@ -33,12 +33,14 @@ import {
   userAchievements,
   pointsHistory
 } from "../drizzle/schema";
-<<<<<<< HEAD
+
 import type { User } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
-=======
+}
+
+
 import { eq, and, inArray } from "drizzle-orm";
->>>>>>> 20a3975 (feat: fortalecer importacao em lote de alunos)
+
 import { calculatePlanProgress } from "./planProgressHelper";
 import { analisarSWOT, validarCanvas, analisarRiscos, gerarRecomendacoes, calcularSaudeEstrategia } from "./strategicHelper";
 import { calcularVPL, calcularTIR, calcularPayback, calcularFluxoCaixa, calcularDRE, calcularBalanco, calcularIndicadores, analisarFinanceiro } from "./financialHelper";
@@ -47,6 +49,7 @@ import { generatePlanPDF, generatePDFFileName, validateExportData, type PDFExpor
 import { generateExcelReport, generateExcelFileName } from "./excelExportHelper";
 import { generateWordReport, generateWordFileName } from "./wordExportHelper";
 import { CoverOptionsSchema, validateCoverOptions, generateCoverSummary, COVER_THEMES } from "./coverCustomization";
+
 
 type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 type BusinessPlanRecord = typeof businessPlans.$inferSelect;
@@ -251,6 +254,34 @@ async function handlePlanSectionTriggers(
   }
 }
 
+
+
+  const plans = await getBusinessPlansByUser(userId);
+  const unlockedAchievementIds = new Set<string>();
+
+  for (const plan of plans) {
+    const planData = (plan.data || {}) as any;
+    const planProgress = calculatePlanProgress(planData);
+    const unlockedForPlan = checkAchievements(
+      planData,
+      {
+        userId,
+        points: 0,
+        level: 1,
+        xp: 0,
+        medals: 0,
+        achievements: Array.from(unlockedAchievementIds),
+      },
+      planProgress
+    );
+
+    unlockedForPlan.forEach((achievementId) => unlockedAchievementIds.add(achievementId));
+  }
+
+  return ACHIEVEMENTS.filter((achievement) => unlockedAchievementIds.has(achievement.id));
+
+}
+
 export const appRouter = router({
   system: systemRouter,
   
@@ -287,7 +318,11 @@ export const appRouter = router({
     }),
   }),
 
-  // ============ USUÃRIOS ============
+  // }
+
+===== USUÃRIOS }
+
+=====
   users: router({
     me: protectedProcedure.query(({ ctx }) => ctx.user),
     
@@ -421,7 +456,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ TURMAS ============
+  // }
+
+===== TURMAS }
+
+=====
   classes: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb();
@@ -791,7 +830,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ PLANOS DE NEGÃ“CIOS ============
+  // }
+
+===== PLANOS DE NEGÃ“CIOS }
+
+=====
   businessPlans: router({
     list: studentProcedure.query(async ({ ctx }) => {
       return getBusinessPlansByUser(ctx.user!.id);
@@ -1014,7 +1057,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ GAMIFICAÃ‡ÃƒO ============
+  // }
+
+===== GAMIFICAÃ‡ÃƒO }
+
+=====
   gamification: router({
     getScore: studentProcedure.query(async ({ ctx }) => {
       const score = await getUserScore(ctx.user!.id);
@@ -1122,30 +1169,85 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    getAchievements: studentProcedure.query(async () => {
-      return ACHIEVEMENTS;
+    getAchievements: studentProcedure.query(async ({ ctx }) => {
+      return getUnlockedAchievementsForUser(ctx.user!.id);
     }),
 
     getSummary: studentProcedure.query(async ({ ctx }) => {
       const score = await getUserScore(ctx.user!.id);
+      const unlockedAchievements = await getUnlockedAchievementsForUser(ctx.user!.id);
+      const unlockedAchievementIds = unlockedAchievements.map((achievement) => achievement.id);
+      const nextAchievements = ACHIEVEMENTS.filter(
+        (achievement) => !unlockedAchievementIds.includes(achievement.id)
+      ).slice(0, 3);
+      const userPlans = await getBusinessPlansByUser(ctx.user!.id);
+      const rankingClassId = userPlans.find((plan) => plan.classId)?.classId;
+
+      let rankingPosition = 0;
+      let rankingTotal = 0;
+
+      if (rankingClassId) {
+        const db = await getDb();
+        if (db) {
+          const enrollmentList = await db
+            .select()
+            .from(enrollments)
+            .where(eq(enrollments.classId, rankingClassId));
+
+          const studentIds = enrollmentList.map((enrollment) => enrollment.studentId);
+
+          if (studentIds.length > 0) {
+            const scores = await db
+              .select()
+              .from(userScores)
+              .where(inArray(userScores.userId, studentIds));
+
+            const rankingUsers = await db
+              .select({
+                id: users.id,
+                name: users.name,
+              })
+              .from(users)
+              .where(inArray(users.id, studentIds));
+
+            const ranking = calculateRanking(scores as any, rankingUsers);
+            rankingPosition = ranking.find((entry) => entry.userId === ctx.user!.id)?.position || 0;
+            rankingTotal = ranking.length;
+          }
+        }
+      }
+
       if (!score) {
         return {
           totalPoints: 0,
           currentLevel: 1,
           xpToNextLevel: 1000,
-          totalAchievements: 0,
+          totalAchievements: unlockedAchievements.length,
           totalMedals: 0,
-          nextAchievements: ACHIEVEMENTS.slice(0, 3),
-          rankingPosition: 0,
-          rankingTotal: 0,
+          nextAchievements,
+          rankingPosition,
+          rankingTotal,
         };
       }
       
-      return { totalPoints: score.points || 0, currentLevel: score.level || 1, xpToNextLevel: (score.level || 1) * 1000, totalAchievements: 0, totalMedals: score.medals || 0, nextAchievements: ACHIEVEMENTS.slice(0, 3), rankingPosition: 0, rankingTotal: 0 };
+      return {
+        totalPoints: score.points || 0,
+        currentLevel: score.level || 1,
+        xpToNextLevel: (score.level || 1) * 1000,
+        totalAchievements: unlockedAchievements.length,
+        totalMedals: score.medals || 0,
+        nextAchievements,
+        rankingPosition,
+        rankingTotal,
+      };
     }),
   }),
 
-  // ============ TEMA ============
+  // }
+
+===== TEMA }
+
+=====
   theme: router({
     get: protectedProcedure.query(async ({ ctx }) => {
       if (!ctx.user?.institutionId) {
@@ -1237,7 +1339,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ FERRAMENTAS ESTRATÃ‰GICAS ============
+  // }
+
+===== FERRAMENTAS ESTRATÃ‰GICAS }
+
+=====
   strategic: router({
     swot: router({
       save: studentProcedure
@@ -1499,7 +1605,11 @@ export const appRouter = router({
     }),
   }),
 
-  // ============ MÃ“DULO FINANCEIRO ============
+  // }
+
+===== MÃ“DULO FINANCEIRO }
+
+=====
   financeiro: router({
     calcularVPL: studentProcedure
       .input(
@@ -1597,7 +1707,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ============ NOTIFICAÃ‡Ã•ES ============
+  // }
+
+===== NOTIFICAÃ‡Ã•ES }
+
+=====
   notifications: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return getNotificationsByUser(ctx.user!.id);
@@ -1620,6 +1734,8 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+
 
 
 

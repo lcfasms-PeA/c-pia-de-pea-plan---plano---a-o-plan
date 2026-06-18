@@ -4,7 +4,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trophy, Zap, Target, Award, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { skipToken } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -52,11 +51,9 @@ export default function DashboardAluno() {
   const [, navigate] = useLocation();
   const { data: scoreData, isLoading: scoreLoading } = trpc.gamification.getScore.useQuery();
   const { data: plansData, isLoading: plansLoading } = trpc.businessPlans.list.useQuery();
+  const { data: achievementsData, isLoading: achievementsLoading } = trpc.gamification.getAchievements.useQuery();
   const { data: summaryData, isLoading: summaryLoading } = trpc.gamification.getSummary.useQuery();
-  const rankingClassId = plansData?.find((plan) => plan.classId)?.classId;
-  const { data: rankingData, isLoading: rankingLoading } = trpc.gamification.getRanking.useQuery(
-    rankingClassId ? { classId: rankingClassId } : skipToken
-  );
+  const rankingLoading = summaryLoading;
   const createPlanMutation = trpc.businessPlans.create.useMutation();
 
   const plansWithProgress = useMemo(
@@ -70,13 +67,14 @@ export default function DashboardAluno() {
     xpNext: scoreData?.xpNext || 1000,
     points: scoreData?.points || 0,
     achievements: summaryData?.totalAchievements || 0,
-    rank: rankingData?.find((r) => r.userId === user?.id)?.position || 0,
+    rank: summaryData?.rankingPosition || 0,
+    rankingTotal: summaryData?.rankingTotal || 0,
   };
 
   const handleCreatePlan = async () => {
     try {
       const title = `Plano ${new Date().toLocaleDateString("pt-BR")}`;
-      const result = await createPlanMutation.mutateAsync({ title, classId: rankingClassId || undefined });
+      const result = await createPlanMutation.mutateAsync({ title, classId: plansData?.find((plan) => plan.classId)?.classId || undefined });
       navigate(`/plano/${result.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao criar plano";
@@ -157,6 +155,9 @@ export default function DashboardAluno() {
               <Award className="w-8 h-8 text-purple-600 mx-auto mb-2" />
               <p className="text-gray-600 text-sm">Ranking</p>
               <p className="text-3xl font-bold">{userStats.rank > 0 ? `#${userStats.rank}` : "-"}</p>
+              {userStats.rankingTotal > 0 && (
+                <p className="text-xs text-gray-500 mt-1">de {userStats.rankingTotal} aluno(s)</p>
+              )}
             </>
           )}
         </Card>
@@ -207,12 +208,21 @@ export default function DashboardAluno() {
       {/* Conquistas */}
       <Card className="p-6">
         <h2 className="text-2xl font-bold mb-4">Próximas Conquistas</h2>
-        {summaryLoading ? (
+        {summaryLoading || achievementsLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         ) : summaryData && summaryData.nextAchievements.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="space-y-4">
+            {achievementsData && achievementsData.length > 0 && (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                <p className="text-sm font-semibold text-yellow-900">
+                  {achievementsData.length} conquista(s) já desbloqueada(s)
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {summaryData.nextAchievements.map((achievement) => (
               <div
                 key={achievement.id}
@@ -223,6 +233,7 @@ export default function DashboardAluno() {
                 <p className="text-xs text-gray-600 mt-1">{achievement.descricao}</p>
               </div>
             ))}
+            </div>
           </div>
         ) : (
           <p className="text-gray-500 text-center py-8">Nenhuma conquista pendente encontrada</p>
