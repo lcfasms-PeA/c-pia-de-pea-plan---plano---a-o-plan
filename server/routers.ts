@@ -1,11 +1,9 @@
-﻿import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
-import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { protectedProcedure } from "./_core/trpc";
 import { adminProcedure, professorProcedure, studentProcedure, coordinatorProcedure } from "./_core/roleMiddleware";
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { 
   getUsersByInstitution, 
@@ -16,8 +14,7 @@ import {
   getThemeByInstitution,
   getNotificationsByUser,
   getInstitutionById,
-  getDb,
-  upsertUser
+  getDb
 } from "./db";
 import { 
   users, 
@@ -33,14 +30,7 @@ import {
   userAchievements,
   pointsHistory
 } from "../drizzle/schema";
-
-import type { User } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
-}
-
-
 import { eq, and, inArray } from "drizzle-orm";
-
 import { calculatePlanProgress } from "./planProgressHelper";
 import { analisarSWOT, validarCanvas, analisarRiscos, gerarRecomendacoes, calcularSaudeEstrategia } from "./strategicHelper";
 import { calcularVPL, calcularTIR, calcularPayback, calcularFluxoCaixa, calcularDRE, calcularBalanco, calcularIndicadores, analisarFinanceiro } from "./financialHelper";
@@ -50,212 +40,25 @@ import { generateExcelReport, generateExcelFileName } from "./excelExportHelper"
 import { generateWordReport, generateWordFileName } from "./wordExportHelper";
 import { CoverOptionsSchema, validateCoverOptions, generateCoverSummary, COVER_THEMES } from "./coverCustomization";
 
+function buildExportData(planData: any, authorName: string) {
+  const sections = (planData.data as any) || {};
 
-type DbClient = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-type BusinessPlanRecord = typeof businessPlans.$inferSelect;
-
-const PLAN_SECTION_LABELS: Record<string, string> = {
-  descricaoEmpresa: "DescriÃ§Ã£o da Empresa",
-  produtosServicos: "Produtos e ServiÃ§os",
-  estruturaOrganizacional: "Estrutura Organizacional",
-  planoMarketing: "Plano de Marketing",
-  planoOperacional: "Plano Operacional",
-  estruturaCapitalizacao: "Estrutura de CapitalizaÃ§Ã£o",
-  planoFinanceiro: "Plano Financeiro",
-  sumarioExecutivo: "SumÃ¡rio Executivo",
-};
-
-function isAdminRole(role: string | undefined) {
-  return role === "admin_geral" || role === "admin";
+  return {
+    planName: planData.title || "Plano de Negócios",
+    companyName:
+      sections?.descricaoEmpresa?.nomeEmpresa ||
+      sections?.descricao?.nomeEmpresa ||
+      "Empresa",
+    authorName: authorName || "Autor",
+    createdAt: planData.createdAt,
+    sections,
+    swot: sections?.swot,
+    canvas: sections?.canvas,
+    financialAnalysis: sections?.planoFinanceiro || sections?.financeiro,
+  } satisfies PDFExportData;
 }
 
-async function assertCanAccessPlan(
-  db: DbClient,
-  user: User | null | undefined,
-  planId: number
-): Promise<BusinessPlanRecord> {
-  const result = await db
-    .select()
-    .from(businessPlans)
-    .where(eq(businessPlans.id, planId))
-    .limit(1);
-
-  if (result.length === 0) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
-  }
-
-  const plan = result[0];
-  if (!user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
-  }
-
-  if (isAdminRole(user.role) || plan.userId === user.id) {
-    return plan;
-  }
-
-  if (!plan.classId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Unauthorized" });
-  }
-
-  const classData = await db
-    .select()
-    .from(classes)
-    .where(eq(classes.id, plan.classId))
-    .limit(1);
-
-  const classItem = classData[0];
-  if (!classItem) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Unauthorized" });
-  }
-
-  if (user.role === "professor" && classItem.professorId === user.id) {
-    return plan;
-  }
-
-  if (user.role === "coordenador" && classItem.institutionId === user.institutionId) {
-    return plan;
-  }
-
-  throw new TRPCError({ code: "FORBIDDEN", message: "Unauthorized" });
-}
-
-async function addGamificationPoints(
-  db: DbClient,
-  userId: number,
-  points: number,
-  reason: string
-) {
-  const existingHistory = await db
-    .select()
-    .from(pointsHistory)
-    .where(and(eq(pointsHistory.userId, userId), eq(pointsHistory.reason, reason)))
-    .limit(1);
-
-  if (existingHistory.length > 0) return false;
-
-  const existingScore = await getUserScore(userId);
-  if (!existingScore) {
-    await db.insert(userScores).values({
-      userId,
-      points,
-      level: 1,
-      xp: points,
-      medals: 0,
-      updatedAt: new Date(),
-    });
-  } else {
-    let newXp = (existingScore.xp || 0) + points;
-    let newLevel = existingScore.level || 1;
-
-    while (newXp >= newLevel * 1000) {
-      newXp -= newLevel * 1000;
-      newLevel++;
-    }
-
-    await db
-      .update(userScores)
-      .set({
-        points: (existingScore.points || 0) + points,
-        level: newLevel,
-        xp: newXp,
-        updatedAt: new Date(),
-      })
-      .where(eq(userScores.userId, userId));
-  }
-
-  await db.insert(pointsHistory).values({
-    userId,
-    points,
-    reason,
-    createdAt: new Date(),
-  });
-
-  return true;
-}
-
-async function notifyUser(
-  db: DbClient,
-  userId: number,
-  title: string,
-  message: string,
-  type: string,
-  severity: string = "Info"
-) {
-  await db.insert(notifications).values({
-    userId,
-    title,
-    message,
-    type,
-    severity,
-    read: false,
-    createdAt: new Date(),
-  });
-}
-
-async function handlePlanSectionTriggers(
-  db: DbClient,
-  plan: BusinessPlanRecord,
-  previousData: any,
-  updatedData: any,
-  section: string
-) {
-  const previousProgress = calculatePlanProgress(previousData);
-  const updatedProgress = calculatePlanProgress(updatedData);
-  const label = PLAN_SECTION_LABELS[section] || section;
-  const previousSection = previousProgress.sections.find((item) => item.name === label);
-  const updatedSection = updatedProgress.sections.find((item) => item.name === label);
-
-  if (!previousSection?.completed && updatedSection?.completed) {
-    const reason = `SeÃ§Ã£o concluÃ­da: ${label} (plano ${plan.id})`;
-    const pointsAdded = await addGamificationPoints(db, plan.userId, 100, reason);
-
-    if (pointsAdded) {
-      await notifyUser(
-        db,
-        plan.userId,
-        "SeÃ§Ã£o concluÃ­da",
-        `VocÃª concluiu "${label}" e ganhou 100 pontos.`,
-        "plan_section_completed",
-        "Success"
-      );
-    }
-  }
-
-  if (previousProgress.completedSections === 0 && updatedProgress.completedSections >= 1) {
-    const reason = `Conquista: Primeiro Passo (plano ${plan.id})`;
-    const pointsAdded = await addGamificationPoints(db, plan.userId, 100, reason);
-
-    if (pointsAdded) {
-      await notifyUser(
-        db,
-        plan.userId,
-        "Conquista desbloqueada",
-        "Primeiro Passo: complete sua primeira seÃ§Ã£o do plano.",
-        "achievement_unlocked",
-        "Success"
-      );
-    }
-  }
-
-  if (previousProgress.completedSections < 8 && updatedProgress.completedSections === 8) {
-    const reason = `Conquista: Plano Completo (plano ${plan.id})`;
-    const pointsAdded = await addGamificationPoints(db, plan.userId, 500, reason);
-
-    if (pointsAdded) {
-      await notifyUser(
-        db,
-        plan.userId,
-        "Conquista desbloqueada",
-        "Plano Completo: todas as 8 seÃ§Ãµes foram concluÃ­das.",
-        "achievement_unlocked",
-        "Success"
-      );
-    }
-  }
-}
-
-
-
+async function getUnlockedAchievementsForUser(userId: number) {
   const plans = await getBusinessPlansByUser(userId);
   const unlockedAchievementIds = new Set<string>();
 
@@ -279,7 +82,6 @@ async function handlePlanSectionTriggers(
   }
 
   return ACHIEVEMENTS.filter((achievement) => unlockedAchievementIds.has(achievement.id));
-
 }
 
 export const appRouter = router({
@@ -287,30 +89,6 @@ export const appRouter = router({
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-
-    devLogin: publicProcedure.mutation(async ({ ctx }) => {
-      const openId = "dev-admin-local";
-      const name = "Administrador Local";
-
-      await upsertUser({
-        openId,
-        name,
-        email: "admin@pea-plan.local",
-        loginMethod: "dev",
-        role: "admin_geral",
-        lastSignedIn: new Date(),
-      });
-
-      const sessionToken = await sdk.createSessionToken(openId, { name });
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-
-      ctx.res.cookie(COOKIE_NAME, sessionToken, {
-        ...cookieOptions,
-        maxAge: 365 * 24 * 60 * 60 * 1000,
-      });
-
-      return { success: true } as const;
-    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -318,11 +96,7 @@ export const appRouter = router({
     }),
   }),
 
-  // }
-
-===== USUÃRIOS }
-
-=====
+  // ============ USUÁRIOS ============
   users: router({
     me: protectedProcedure.query(({ ctx }) => ctx.user),
     
@@ -330,12 +104,12 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) return [];
       
-      // admin_geral vÃª todos os usuÃ¡rios
+      // admin_geral vê todos os usuários
       if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
         return db.select().from(users);
       }
       
-      // coordenador vÃª apenas usuÃ¡rios da sua instituiÃ§Ã£o
+      // coordenador vê apenas usuários da sua instituição
       if (!ctx.user?.institutionId) {
         return [];
       }
@@ -348,7 +122,7 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) return [];
         
-        // admin_geral vÃª todos os usuÃ¡rios com um papel especÃ­fico
+        // admin_geral vê todos os usuários com um papel específico
         if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
           return db
             .select()
@@ -356,7 +130,7 @@ export const appRouter = router({
             .where(eq(users.role, input.role as any));
         }
         
-        // coordenador vÃª apenas usuÃ¡rios da sua instituiÃ§Ã£o com um papel especÃ­fico
+        // coordenador vê apenas usuários da sua instituição com um papel específico
         if (!ctx.user?.institutionId) {
           return [];
         }
@@ -405,10 +179,10 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         
-        // admin_geral pode criar usuÃ¡rios em qualquer instituiÃ§Ã£o
+        // admin_geral pode criar usuários em qualquer instituição
         let institutionId = input.institutionId;
         if (ctx.user?.role !== "admin_geral" && ctx.user?.role !== "admin") {
-          // coordenador cria usuÃ¡rios na sua instituiÃ§Ã£o
+          // coordenador cria usuários na sua instituição
           if (!ctx.user?.institutionId) {
             throw new Error("Institution not found");
           }
@@ -456,11 +230,7 @@ export const appRouter = router({
       }),
   }),
 
-  // }
-
-===== TURMAS }
-
-=====
+  // ============ TURMAS ============
   classes: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb();
@@ -480,7 +250,7 @@ export const appRouter = router({
         return counts;
       };
       
-      // admin_geral vÃª todas as turmas
+      // admin_geral vê todas as turmas
       if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
         const classItems = await db.select().from(classes);
         return withStudentCount(classItems);
@@ -492,7 +262,7 @@ export const appRouter = router({
         return withStudentCount(classItems);
       }
       
-      // Coordenadores veem todas as turmas da sua instituiÃ§Ã£o
+      // Coordenadores veem todas as turmas da sua instituição
       if (!ctx.user?.institutionId) return [];
       const classItems = await db
         .select()
@@ -555,10 +325,10 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // admin_geral pode criar turmas em qualquer instituiÃ§Ã£o
+        // admin_geral pode criar turmas em qualquer instituição
         let institutionId = input.institutionId;
         if (ctx.user?.role !== "admin_geral" && ctx.user?.role !== "admin") {
-          // professor cria turmas na sua instituiÃ§Ã£o
+          // professor cria turmas na sua instituição
           if (!ctx.user?.institutionId) {
             throw new Error("Institution not found");
           }
@@ -830,23 +600,32 @@ export const appRouter = router({
       }),
   }),
 
-  // }
-
-===== PLANOS DE NEGÃ“CIOS }
-
-=====
+  // ============ PLANOS DE NEGÓCIOS ============
   businessPlans: router({
     list: studentProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
+        return db.select().from(businessPlans);
+      }
+
       return getBusinessPlansByUser(ctx.user!.id);
     }),
 
     getById: studentProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input, ctx }) => {
+      .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return null;
-
-        return assertCanAccessPlan(db, ctx.user, input.id);
+        
+        const result = await db
+          .select()
+          .from(businessPlans)
+          .where(eq(businessPlans.id, input.id))
+          .limit(1);
+        
+        return result.length > 0 ? result[0] : null;
       }),
 
     create: studentProcedure
@@ -877,10 +656,9 @@ export const appRouter = router({
           status: z.string().optional(),
         })
       )
-      .mutation(async ({ input, ctx }) => {
+      .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        await assertCanAccessPlan(db, ctx.user, input.id);
         
         await db
           .update(businessPlans)
@@ -912,12 +690,19 @@ export const appRouter = router({
           data: z.record(z.string(), z.any()),
         })
       )
-      .mutation(async ({ input, ctx }) => {
+      .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-
-        const plan = await assertCanAccessPlan(db, ctx.user, input.id);
-        const currentData = (plan.data || {}) as any;
+        
+        const plan = await db
+          .select()
+          .from(businessPlans)
+          .where(eq(businessPlans.id, input.id))
+          .limit(1);
+        
+        if (plan.length === 0) throw new Error("Plan not found");
+        
+        const currentData = (plan[0].data || {}) as any;
         const updatedData = {
           ...currentData,
           [input.section]: input.data,
@@ -930,20 +715,25 @@ export const appRouter = router({
             updatedAt: new Date(),
           })
           .where(eq(businessPlans.id, input.id));
-
-        await handlePlanSectionTriggers(db, plan, currentData, updatedData, input.section);
         
         return { success: true, data: updatedData };
       }),
 
     getProgress: studentProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input, ctx }) => {
+      .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return null;
-
-        const plan = await assertCanAccessPlan(db, ctx.user, input.id);
-        const progress = calculatePlanProgress(plan.data as any);
+        
+        const plan = await db
+          .select()
+          .from(businessPlans)
+          .where(eq(businessPlans.id, input.id))
+          .limit(1);
+        
+        if (plan.length === 0) return null;
+        
+        const progress = calculatePlanProgress(plan[0].data as any);
         
         return progress;
       }),
@@ -953,20 +743,13 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-
-        const planData = await assertCanAccessPlan(db, ctx.user, input.id);
-        const user = ctx.user!;
         
-        const exportData: PDFExportData = {
-          planName: planData.title || "Plano de NegÃ³cios",
-          companyName: (planData.data as any)?.descricao?.nomeEmpresa || "Empresa",
-          authorName: user.name || "Autor",
-          createdAt: planData.createdAt,
-          sections: (planData.data as any) || {},
-          swot: (planData.data as any)?.swot,
-          canvas: (planData.data as any)?.canvas,
-          financialAnalysis: (planData.data as any)?.financeiro,
-        };
+        const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.id)).limit(1);
+        if (plan.length === 0) throw new Error("Plan not found");
+        
+        const planData = plan[0];
+        const user = ctx.user!;
+        const exportData = buildExportData(planData, user.name || "Autor");
         
         const validation = validateExportData(exportData);
         if (!validation.valid) {
@@ -989,20 +772,13 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-
-        const planData = await assertCanAccessPlan(db, ctx.user, input.id);
-        const user = ctx.user!;
         
-        const exportData: PDFExportData = {
-          planName: planData.title || "Plano de NegÃ³cios",
-          companyName: (planData.data as any)?.descricao?.nomeEmpresa || "Empresa",
-          authorName: user.name || "Autor",
-          createdAt: planData.createdAt,
-          sections: (planData.data as any) || {},
-          swot: (planData.data as any)?.swot,
-          canvas: (planData.data as any)?.canvas,
-          financialAnalysis: (planData.data as any)?.financeiro,
-        };
+        const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.id)).limit(1);
+        if (plan.length === 0) throw new Error("Plan not found");
+        
+        const planData = plan[0];
+        const user = ctx.user!;
+        const exportData = buildExportData(planData, user.name || "Autor");
         
         const validation = validateExportData(exportData);
         if (!validation.valid) {
@@ -1025,20 +801,13 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-
-        const planData = await assertCanAccessPlan(db, ctx.user, input.id);
-        const user = ctx.user!;
         
-        const exportData: PDFExportData = {
-          planName: planData.title || "Plano de NegÃ³cios",
-          companyName: (planData.data as any)?.descricao?.nomeEmpresa || "Empresa",
-          authorName: user.name || "Autor",
-          createdAt: planData.createdAt,
-          sections: (planData.data as any) || {},
-          swot: (planData.data as any)?.swot,
-          canvas: (planData.data as any)?.canvas,
-          financialAnalysis: (planData.data as any)?.financeiro,
-        };
+        const plan = await db.select().from(businessPlans).where(eq(businessPlans.id, input.id)).limit(1);
+        if (plan.length === 0) throw new Error("Plan not found");
+        
+        const planData = plan[0];
+        const user = ctx.user!;
+        const exportData = buildExportData(planData, user.name || "Autor");
         
         const validation = validateExportData(exportData);
         if (!validation.valid) {
@@ -1057,11 +826,7 @@ export const appRouter = router({
       }),
   }),
 
-  // }
-
-===== GAMIFICAÃ‡ÃƒO }
-
-=====
+  // ============ GAMIFICAÇÃO ============
   gamification: router({
     getScore: studentProcedure.query(async ({ ctx }) => {
       const score = await getUserScore(ctx.user!.id);
@@ -1262,11 +1027,7 @@ export const appRouter = router({
     }),
   }),
 
-  // }
-
-===== TEMA }
-
-=====
+  // ============ TEMA ============
   theme: router({
     get: protectedProcedure.query(async ({ ctx }) => {
       if (!ctx.user?.institutionId) {
@@ -1358,11 +1119,7 @@ export const appRouter = router({
       }),
   }),
 
-  // }
-
-===== FERRAMENTAS ESTRATÃ‰GICAS }
-
-=====
+  // ============ FERRAMENTAS ESTRATÉGICAS ============
   strategic: router({
     swot: router({
       save: studentProcedure
@@ -1624,11 +1381,7 @@ export const appRouter = router({
     }),
   }),
 
-  // }
-
-===== MÃ“DULO FINANCEIRO }
-
-=====
+  // ============ MÓDULO FINANCEIRO ============
   financeiro: router({
     calcularVPL: studentProcedure
       .input(
@@ -1726,11 +1479,7 @@ export const appRouter = router({
       }),
   }),
 
-  // }
-
-===== NOTIFICAÃ‡Ã•ES }
-
-=====
+  // ============ NOTIFICAÇÕES ============
   notifications: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return getNotificationsByUser(ctx.user!.id);
@@ -1753,11 +1502,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-
-
-
-
-
-
-
-

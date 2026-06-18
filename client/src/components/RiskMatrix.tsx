@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Save, Loader2, AlertTriangle, AlertCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { createClientId } from "@/lib/createClientId";
 import { toast } from "sonner";
 
 interface Risk {
@@ -53,7 +54,7 @@ export default function RiskMatrix({ planId, initialRisks = [] }: RiskMatrixProp
 
   const handleAddRisk = () => {
     const newRisk: Risk = {
-      id: Math.random().toString(),
+      id: createClientId(),
       descricao: "",
       probabilidade: 3,
       impacto: 3,

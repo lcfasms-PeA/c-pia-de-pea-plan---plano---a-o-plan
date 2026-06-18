@@ -22,6 +22,7 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
+import { createClientId } from "@/lib/createClientId";
 
 interface SWOTData {
   strengths: string[];
@@ -176,10 +177,10 @@ export default function SWOTEditor({ planId, initialData }: SWOTEditorProps) {
     try {
       await saveSWOTMutation.mutateAsync({
         planId,
-        forcas: swotData.strengths.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
-        fraquezas: swotData.weaknesses.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
-        oportunidades: swotData.opportunities.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
-        ameacas: swotData.threats.map((desc) => ({ id: Math.random().toString(), descricao: desc })),
+        forcas: swotData.strengths.map((desc) => ({ id: createClientId(), descricao: desc })),
+        fraquezas: swotData.weaknesses.map((desc) => ({ id: createClientId(), descricao: desc })),
+        oportunidades: swotData.opportunities.map((desc) => ({ id: createClientId(), descricao: desc })),
+        ameacas: swotData.threats.map((desc) => ({ id: createClientId(), descricao: desc })),
       });
       await Promise.all([refetchAnalysis(), refetchRecommendations()]);
       toast.success("Análise SWOT salva com sucesso!");

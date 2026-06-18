@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Save, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { createClientId } from "@/lib/createClientId";
 import { toast } from "sonner";
 
 interface Task {
@@ -63,7 +64,7 @@ export default function TimelineGantt({ planId, initialTasks = [] }: TimelineGan
 
   const handleAddTask = () => {
     const newTask: Task = {
-      id: Math.random().toString(),
+      id: createClientId(),
       titulo: "",
       descricao: "",
       dataInicio: startDate,
