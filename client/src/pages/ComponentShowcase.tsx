@@ -187,11 +187,14 @@ export default function ComponentsShowcase() {
   const [dialogInput, setDialogInput] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // AI ChatBox demo state
+  // AI ChatBox preview state
   const [chatMessages, setChatMessages] = useState<Message[]>([
-    { role: "system", content: "You are a helpful assistant." },
+    {
+      role: "system",
+      content:
+        "Esta visualizacao demonstra apenas a interface do componente de chat. A integracao com backend deve ser fornecida pela tela consumidora.",
+    },
   ]);
-  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const handleDialogSubmit = () => {
     console.log("Dialog submitted with value:", dialogInput);
@@ -210,20 +213,14 @@ export default function ComponentsShowcase() {
   };
 
   const handleChatSend = (content: string) => {
-    // Add user message
     const newMessages: Message[] = [...chatMessages, { role: "user", content }];
-    setChatMessages(newMessages);
+    const previewReply: Message = {
+      role: "assistant",
+      content:
+        "Preview local do componente: a mensagem foi recebida pela UI. Para uso real, conecte `onSendMessage` a uma mutation ou endpoint do seu backend.",
+    };
 
-    // Simulate AI response with delay
-    setIsChatLoading(true);
-    setTimeout(() => {
-      const aiResponse: Message = {
-        role: "assistant",
-        content: `This is a **demo response**. In a real app, you would call a tRPC mutation here:\n\n\`\`\`typescript\nconst chatMutation = trpc.ai.chat.useMutation({\n  onSuccess: (response) => {\n    setChatMessages(prev => [...prev, {\n      role: "assistant",\n      content: response.choices[0].message.content\n    }]);\n  }\n});\n\nchatMutation.mutate({ messages: newMessages });\n\`\`\`\n\nYour message was: "${content}"`,
-      };
-      setChatMessages([...newMessages, aiResponse]);
-      setIsChatLoading(false);
-    }, 1500);
+    setChatMessages([...newMessages, previewReply]);
   };
 
   return (
@@ -1403,13 +1400,13 @@ export default function ComponentsShowcase() {
                       Features markdown rendering, auto-scrolling, and loading states.
                     </p>
                     <p className="mt-2">
-                      This is a demo with simulated responses. In a real app, you'd connect it to a tRPC mutation.
+                      This showcase now demonstrates only the UI contract of the component. Real AI behavior must be provided by the consuming screen.
                     </p>
                   </div>
                   <AIChatBox
                     messages={chatMessages}
                     onSendMessage={handleChatSend}
-                    isLoading={isChatLoading}
+                    isLoading={false}
                     placeholder="Try sending a message..."
                     height="500px"
                     emptyStateMessage="How can I help you today?"
