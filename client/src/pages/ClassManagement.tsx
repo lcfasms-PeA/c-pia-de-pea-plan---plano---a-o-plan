@@ -203,6 +203,7 @@ export default function ClassManagement() {
             });
           }
         }}
+        onStudentsChanged={() => setRefreshKey(prev => prev + 1)}
       />
 
       <BulkEnrollDialog

@@ -44,14 +44,19 @@ function ClassCard({
 }: ClassItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const deleteMutation = trpc.classes.delete.useMutation();
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // Aqui seria necessário um endpoint delete
-      // Por enquanto, apenas mostrar mensagem
-      toast.info('Funcionalidade de deleção será implementada');
+      await deleteMutation.mutateAsync({ id: classItem.id });
+      toast.success('Turma deletada com sucesso');
       setShowDeleteConfirm(false);
+      onDelete?.(classItem.id);
+      onRefresh?.();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao deletar turma';
+      toast.error(message);
     } finally {
       setIsDeleting(false);
     }

@@ -24,6 +24,7 @@ import {
   classes, 
   enrollments, 
   businessPlans, 
+  messages,
   userScores, 
   themes, 
   notifications,
@@ -421,23 +422,41 @@ export const appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
+
+      const withStudentCount = async (classItems: Array<any>) => {
+        const counts = await Promise.all(
+          classItems.map(async (classItem) => {
+            const enrollmentData = await getEnrollmentsByClass(classItem.id);
+            return {
+              ...classItem,
+              studentCount: enrollmentData.length,
+            };
+          })
+        );
+
+        return counts;
+      };
       
       // admin_geral vÃª todas as turmas
       if (ctx.user?.role === "admin_geral" || ctx.user?.role === "admin") {
-        return db.select().from(classes);
+        const classItems = await db.select().from(classes);
+        return withStudentCount(classItems);
       }
       
       // Professores veem apenas suas turmas
       if (ctx.user?.role === "professor") {
-        return getClassesByProfessor(ctx.user.id);
+        const classItems = await getClassesByProfessor(ctx.user.id);
+        return withStudentCount(classItems);
       }
       
       // Coordenadores veem todas as turmas da sua instituiÃ§Ã£o
       if (!ctx.user?.institutionId) return [];
-      return db
+      const classItems = await db
         .select()
         .from(classes)
         .where(eq(classes.institutionId, ctx.user.institutionId));
+
+      return withStudentCount(classItems);
     }),
 
     getById: protectedProcedure
@@ -455,10 +474,30 @@ export const appRouter = router({
         if (classData.length === 0) return null;
         
         const enrollmentData = await getEnrollmentsByClass(input.id);
+        const students = await Promise.all(
+          enrollmentData.map(async (enrollment) => {
+            const studentData = await db
+              .select({
+                id: users.id,
+                name: users.name,
+                email: users.email,
+              })
+              .from(users)
+              .where(eq(users.id, enrollment.studentId))
+              .limit(1);
+
+            return {
+              studentId: enrollment.studentId,
+              studentName: studentData[0]?.name || `Aluno #${enrollment.studentId}`,
+              studentEmail: studentData[0]?.email || "",
+              enrollmentDate: enrollment.enrollmentDate,
+            };
+          })
+        );
         
         return {
           ...classData[0],
-          students: enrollmentData,
+          students,
         };
       }),
 
@@ -607,6 +646,46 @@ export const appRouter = router({
             updatedAt: new Date(),
           })
           .where(eq(classes.id, input.id));
+
+        return { success: true };
+      }),
+
+    delete: professorProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const classData = await db
+          .select()
+          .from(classes)
+          .where(eq(classes.id, input.id))
+          .limit(1);
+
+        if (classData.length === 0) throw new Error("Class not found");
+
+        const classItem = classData[0];
+        if (
+          classItem.professorId !== ctx.user?.id &&
+          ctx.user?.role !== "admin_geral" &&
+          ctx.user?.role !== "admin" &&
+          ctx.user?.role !== "coordenador"
+        ) {
+          throw new Error("Unauthorized");
+        }
+
+        const linkedPlans = await db
+          .select({ id: businessPlans.id })
+          .from(businessPlans)
+          .where(eq(businessPlans.classId, input.id));
+
+        if (linkedPlans.length > 0) {
+          throw new Error("A turma possui planos vinculados e não pode ser deletada");
+        }
+
+        await db.delete(enrollments).where(eq(enrollments.classId, input.id));
+        await db.delete(messages).where(eq(messages.classId, input.id));
+        await db.delete(classes).where(eq(classes.id, input.id));
 
         return { success: true };
       }),

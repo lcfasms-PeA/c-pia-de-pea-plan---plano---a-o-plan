@@ -29,6 +29,7 @@ interface ClassStudentsProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onBulkEnroll?: (classId: number) => void;
+  onStudentsChanged?: () => void;
 }
 
 interface StudentEnrollment {
@@ -44,6 +45,7 @@ export default function ClassStudents({
   open = false,
   onOpenChange,
   onBulkEnroll,
+  onStudentsChanged,
 }: ClassStudentsProps) {
   const [studentToRemove, setStudentToRemove] = useState<number | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -65,6 +67,7 @@ export default function ClassStudents({
       toast.success('Aluno removido da turma!');
       setStudentToRemove(null);
       refetchClass();
+      onStudentsChanged?.();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao remover aluno';
       toast.error(errorMessage);
@@ -117,8 +120,7 @@ export default function ClassStudents({
                           <div className="flex items-center gap-2 mb-1">
                             <User className="w-4 h-4 text-muted-foreground" />
                             <p className="font-semibold truncate">
-                              {/* Nome do aluno - seria necessário buscar */}
-                              Aluno #{enrollment.studentId}
+                              {enrollment.studentName}
                             </p>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
