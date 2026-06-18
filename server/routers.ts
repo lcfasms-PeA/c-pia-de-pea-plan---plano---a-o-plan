@@ -1241,6 +1241,25 @@ export const appRouter = router({
         rankingTotal,
       };
     }),
+
+    getAdminOverview: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) {
+        return {
+          totalPoints: 0,
+          totalMedals: 0,
+          activeScores: 0,
+        };
+      }
+
+      const scores = await db.select().from(userScores);
+
+      return {
+        totalPoints: scores.reduce((sum, score) => sum + (score.points || 0), 0),
+        totalMedals: scores.reduce((sum, score) => sum + (score.medals || 0), 0),
+        activeScores: scores.length,
+      };
+    }),
   }),
 
   // }

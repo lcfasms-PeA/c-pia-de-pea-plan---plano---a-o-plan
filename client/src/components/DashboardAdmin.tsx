@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,19 @@ export default function DashboardAdmin() {
   const { data: usersList, isLoading: usersLoading } = trpc.users.list.useQuery();
   const { data: classesList, isLoading: classesLoading } = trpc.classes.list.useQuery();
   const { data: plansData, isLoading: plansLoading } = trpc.businessPlans.list.useQuery();
-  const { data: scoreData, isLoading: scoreLoading } = trpc.gamification.getSummary.useQuery();
+  const { data: adminOverview, isLoading: scoreLoading } = trpc.gamification.getAdminOverview.useQuery();
+
+  const sortedUsers = useMemo(() => {
+    return [...(usersList || [])].sort((a, b) => {
+      const aTime = new Date(a.createdAt || 0).getTime();
+      const bTime = new Date(b.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+  }, [usersList]);
+
+  const professorNameById = useMemo(() => {
+    return new Map((usersList || []).map((user) => [user.id, user.name || `Usuário #${user.id}`]));
+  }, [usersList]);
 
   const stats = [
     {
@@ -37,7 +50,7 @@ export default function DashboardAdmin() {
     },
     {
       title: "Pontos Distribuídos",
-      value: scoreLoading ? "..." : (scoreData?.totalPoints || 0).toString(),
+      value: scoreLoading ? "..." : (adminOverview?.totalPoints || 0).toString(),
       icon: Trophy,
       color: "bg-yellow-100",
       textColor: "text-yellow-600",
@@ -88,9 +101,9 @@ export default function DashboardAdmin() {
             <div className="flex justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-          ) : usersList && usersList.length > 0 ? (
+          ) : sortedUsers.length > 0 ? (
             <div className="space-y-3">
-              {usersList.slice(0, 3).map((u) => (
+              {sortedUsers.slice(0, 3).map((u) => (
                 <div
                   key={u.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
@@ -144,7 +157,7 @@ export default function DashboardAdmin() {
               >
                 <div>
                   <p className="font-medium">{c.name}</p>
-                  <p className="text-sm text-gray-600">Professor: {c.professorId}</p>
+                  <p className="text-sm text-gray-600">Professor: {professorNameById.get(c.professorId) || `Usuário #${c.professorId}`}</p>
                 </div>
                 <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">
                   Ativa
