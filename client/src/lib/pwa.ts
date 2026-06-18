@@ -4,47 +4,54 @@
  */
 
 export function registerServiceWorker(): void {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
-        .then((registration) => {
-          console.log('✓ Service Worker registrado:', registration);
+  const doRegister = () => {
+    navigator.serviceWorker
+      .register('/sw.js', { scope: '/' })
+      .then((registration) => {
+        console.log('✓ Service Worker registrado:', registration);
 
-          // Verificar updates a cada hora
-          setInterval(() => {
-            registration.update();
-          }, 60 * 60 * 1000);
+        // Verificar updates a cada hora
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
 
-          // Notificar quando novo service worker estiver pronto
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (!newWorker) return;
+        // Notificar quando novo service worker estiver pronto
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
 
-            newWorker.addEventListener('statechange', () => {
-              if (
-                newWorker.state === 'installed' &&
-                navigator.serviceWorker.controller
-              ) {
-                // Nova versão disponível
-                console.log(
-                  '✓ Nova versão disponível, recarregue para atualizar'
-                );
+          newWorker.addEventListener('statechange', () => {
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              // Nova versão disponível
+              console.log(
+                '✓ Nova versão disponível, recarregue para atualizar'
+              );
 
-                // Emitir evento customizado
-                window.dispatchEvent(
-                  new CustomEvent('pwa-update-available', {
-                    detail: { registration },
-                  })
-                );
-              }
-            });
+              // Emitir evento customizado
+              window.dispatchEvent(
+                new CustomEvent('pwa-update-available', {
+                  detail: { registration },
+                })
+              );
+            }
           });
-        })
-        .catch((error) => {
-          console.warn('✗ Erro ao registrar Service Worker:', error);
         });
-    });
+      })
+      .catch((error) => {
+        console.warn('✗ Erro ao registrar Service Worker:', error);
+      });
+  };
+
+  if ('serviceWorker' in navigator) {
+    // Registra imediatamente se a pagina ja terminou de carregar.
+    if (document.readyState === 'complete') {
+      doRegister();
+    } else {
+      window.addEventListener('load', doRegister, { once: true });
+    }
   } else {
     console.log(
       '✗ Service Workers não suportados neste navegador'

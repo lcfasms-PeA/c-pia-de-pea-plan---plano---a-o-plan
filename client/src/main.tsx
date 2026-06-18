@@ -6,6 +6,12 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import {
+  registerServiceWorker,
+  setupInstallPrompt,
+  setupOfflineDetection,
+  setupAutoSync,
+} from "@/lib/pwa";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -51,6 +57,13 @@ const trpcClient = trpc.createClient({
     }),
   ],
 });
+
+if (typeof window !== "undefined") {
+  registerServiceWorker();
+  setupInstallPrompt();
+  setupOfflineDetection();
+  setupAutoSync();
+}
 
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>

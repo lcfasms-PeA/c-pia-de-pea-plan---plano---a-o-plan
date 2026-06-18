@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -154,7 +154,6 @@ export default function SecaoFinanceira({
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const negativeInputFieldsRef = useRef<Record<string, boolean>>({});
 
   // Calcular VPL
   const calcularVPLMutation = trpc.financeiro.calcularVPL.useQuery(
@@ -262,52 +261,13 @@ export default function SecaoFinanceira({
     }
   };
 
-  const updateFinancialData = (patch: Partial<FinancialData>) => {
-    setData(prev => {
-      const next = { ...prev, ...patch };
-      setValidationErrors(validateFinancialData(next));
-      return next;
-    });
-  };
-
-  const updateNumberField = (
-    field: Exclude<keyof FinancialData, 'fluxosCaixa'>,
-    rawValue: string
-  ) => {
-    if (rawValue.trim() === '') {
-      negativeInputFieldsRef.current[field] = false;
-      updateFinancialData({ [field]: 0 } as Partial<FinancialData>);
-      return;
-    }
-
-    negativeInputFieldsRef.current[field] = rawValue.includes('-');
-
-    const parsed = parseFloat(rawValue) || 0;
-    const value =
-      negativeInputFieldsRef.current[field] && parsed > 0 ? -parsed : parsed;
-
-    updateFinancialData({ [field]: value } as Partial<FinancialData>);
-  };
-
-  const markNegativeInput = (field: Exclude<keyof FinancialData, 'fluxosCaixa'>) => (
-    event: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (event.key === '-') {
-      negativeInputFieldsRef.current[field] = true;
-    }
-  };
-
   const updateFluxoCaixa = (index: number, valor: number) => {
-    setData(prev => {
-      const next = {
-        ...prev,
-        fluxosCaixa: prev.fluxosCaixa.map((f, i) =>
-          i === index ? { ...f, valor } : f
-        ),
-      };
-      setValidationErrors(validateFinancialData(next));
-      return next;
-    });
+    setData(prev => ({
+      ...prev,
+      fluxosCaixa: prev.fluxosCaixa.map((f, i) =>
+        i === index ? { ...f, valor } : f
+      ),
+    }));
   };
 
   const addFluxoCaixa = () => {
@@ -320,14 +280,10 @@ export default function SecaoFinanceira({
 
   const removeFluxoCaixa = (index: number) => {
     if (data.fluxosCaixa.length > 1) {
-      setData(prev => {
-        const next = {
-          ...prev,
-          fluxosCaixa: prev.fluxosCaixa.filter((_, i) => i !== index),
-        };
-        setValidationErrors(validateFinancialData(next));
-        return next;
-      });
+      setData(prev => ({
+        ...prev,
+        fluxosCaixa: prev.fluxosCaixa.filter((_, i) => i !== index),
+      }));
     }
   };
 
@@ -409,9 +365,13 @@ export default function SecaoFinanceira({
                   id="investimentoInicial"
                   type="number"
                   value={data.investimentoInicial}
-                  onKeyDown={markNegativeInput('investimentoInicial')}
                   onChange={(e) => {
-                    updateNumberField('investimentoInicial', e.target.value);
+                    setData(prev => ({
+                      ...prev,
+                      investimentoInicial: parseFloat(e.target.value) || 0,
+                    }));
+                    // Limpar erro ao editar
+                    setValidationErrors(prev => prev.filter(err => err.field !== 'investimentoInicial'));
                   }}
                   placeholder="100000"
                   className={validationErrors.some(e => e.field === 'investimentoInicial') ? 'border-red-500' : ''}
@@ -439,9 +399,11 @@ export default function SecaoFinanceira({
                   type="number"
                   step="0.01"
                   value={data.taxaDesconto}
-                  onKeyDown={markNegativeInput('taxaDesconto')}
                   onChange={(e) =>
-                    updateNumberField('taxaDesconto', e.target.value)
+                    setData(prev => ({
+                      ...prev,
+                      taxaDesconto: parseFloat(e.target.value) || 0,
+                    }))
                   }
                   placeholder="0.10"
                 />
@@ -463,9 +425,11 @@ export default function SecaoFinanceira({
                   <Input
                     type="number"
                     value={data.receitas}
-                    onKeyDown={markNegativeInput('receitas')}
                     onChange={(e) =>
-                      updateNumberField('receitas', e.target.value)
+                      setData(prev => ({
+                        ...prev,
+                        receitas: parseFloat(e.target.value) || 0,
+                      }))
                     }
                   />
                 </div>
@@ -474,9 +438,11 @@ export default function SecaoFinanceira({
                   <Input
                     type="number"
                     value={data.custos}
-                    onKeyDown={markNegativeInput('custos')}
                     onChange={(e) =>
-                      updateNumberField('custos', e.target.value)
+                      setData(prev => ({
+                        ...prev,
+                        custos: parseFloat(e.target.value) || 0,
+                      }))
                     }
                   />
                 </div>
@@ -485,9 +451,11 @@ export default function SecaoFinanceira({
                   <Input
                     type="number"
                     value={data.despesas}
-                    onKeyDown={markNegativeInput('despesas')}
                     onChange={(e) =>
-                      updateNumberField('despesas', e.target.value)
+                      setData(prev => ({
+                        ...prev,
+                        despesas: parseFloat(e.target.value) || 0,
+                      }))
                     }
                   />
                 </div>
@@ -496,9 +464,11 @@ export default function SecaoFinanceira({
                   <Input
                     type="number"
                     value={data.juros}
-                    onKeyDown={markNegativeInput('juros')}
                     onChange={(e) =>
-                      updateNumberField('juros', e.target.value)
+                      setData(prev => ({
+                        ...prev,
+                        juros: parseFloat(e.target.value) || 0,
+                      }))
                     }
                   />
                 </div>
@@ -508,9 +478,11 @@ export default function SecaoFinanceira({
                     type="number"
                     step="0.01"
                     value={data.aliquotaImposto}
-                    onKeyDown={markNegativeInput('aliquotaImposto')}
                     onChange={(e) =>
-                      updateNumberField('aliquotaImposto', e.target.value)
+                      setData(prev => ({
+                        ...prev,
+                        aliquotaImposto: parseFloat(e.target.value) || 0,
+                      }))
                     }
                     placeholder="0.15"
                   />
@@ -560,10 +532,8 @@ export default function SecaoFinanceira({
                       <Button
                         variant="destructive"
                         size="sm"
-                        aria-label={`Remover fluxo de caixa do mês ${fluxo.mes}`}
                         onClick={() => removeFluxoCaixa(index)}
                         disabled={data.fluxosCaixa.length === 1}
-                        className="destructive"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

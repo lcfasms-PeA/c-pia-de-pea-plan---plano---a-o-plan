@@ -167,7 +167,7 @@ export default function ClassStudents({
       </Dialog>
 
       {/* Confirmação de Remoção */}
-      <AlertDialog open={studentToRemove !== null} onOpenChange={(open) => {
+      <AlertDialog open={studentToRemove !== null} onOpenChange={(open: boolean) => {
         if (!open) setStudentToRemove(null);
       }}>
         <AlertDialogContent>

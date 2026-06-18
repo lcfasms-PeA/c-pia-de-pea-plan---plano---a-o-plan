@@ -54,10 +54,10 @@
       "name": "Novo Plano",
       "short_name": "Novo",
       "description": "Criar um novo plano de negócios",
-      "url": "/plan/new?utm_source=pwa_shortcut",
+      "url": "/?utm_source=pwa_shortcut",
       "icons": [
         {
-          "src": "/icons/shortcut-new-plan.png",
+          "src": "/icons/shortcut-96x96.png",
           "sizes": "96x96"
         }
       ]
@@ -69,7 +69,7 @@
       "url": "/dashboard?utm_source=pwa_shortcut",
       "icons": [
         {
-          "src": "/icons/shortcut-plans.png",
+          "src": "/icons/shortcut-96x96.png",
           "sizes": "96x96"
         }
       ]
