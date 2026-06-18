@@ -53,11 +53,15 @@ export default function BulkEnrollDialog({
 
     try {
       const source = tab === 'csv' ? 'csv' : 'text';
-      const students = await parseBulkEnrollData(source, input);
+      const { students, duplicates } = await parseBulkEnrollData(source, input);
       setParsedStudents(students);
 
       if (students.length > 0) {
         toast.success(`${students.length} aluno(s) lido(s) com sucesso!`);
+      }
+
+      if (duplicates.length > 0) {
+        toast.warning(`IDs duplicados ignorados: ${duplicates.join(', ')}`);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao processar dados';
@@ -80,9 +84,21 @@ export default function BulkEnrollDialog({
         studentIds,
       });
 
-      toast.success(
-        `${result.enrolled} aluno(s) matriculado(s)${result.skipped > 0 ? `, ${result.skipped} já matriculado(s)` : ''}`
-      );
+      const feedbackParts = [`${result.enrolled} aluno(s) matriculado(s)`];
+
+      if (result.skipped > 0) {
+        feedbackParts.push(`${result.skipped} já matriculado(s)`);
+      }
+
+      if (result.invalid > 0) {
+        feedbackParts.push(`${result.invalid} inválido(s)`);
+      }
+
+      toast.success(feedbackParts.join(', '));
+
+      if (result.invalidStudentIds.length > 0) {
+        toast.warning(`IDs inválidos ignorados: ${result.invalidStudentIds.join(', ')}`);
+      }
 
       setInput('');
       setParsedStudents([]);

@@ -121,16 +121,16 @@ export function extractStudentIDs(students: ParsedStudent[]): {
 export async function parseBulkEnrollData(
   source: 'csv' | 'text',
   content: string
-): Promise<ParsedStudent[]> {
+): Promise<{ students: ParsedStudent[]; duplicates: number[] }> {
   try {
     const students = source === 'csv' ? parseCSV(content) : parseTextIDs(content);
-    const { ids, duplicates } = extractStudentIDs(students);
+    const { duplicates } = extractStudentIDs(students);
+    const uniqueStudents = students.filter((s, idx, arr) => arr.findIndex(x => x.id === s.id) === idx);
 
-    if (duplicates.length > 0) {
-      console.warn(`IDs duplicados encontrados: ${duplicates.join(', ')}`);
-    }
-
-    return students.filter((s, idx, arr) => arr.findIndex(x => x.id === s.id) === idx);
+    return {
+      students: uniqueStudents,
+      duplicates,
+    };
   } catch (error) {
     if (error instanceof Error) {
       throw error;

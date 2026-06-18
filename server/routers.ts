@@ -33,8 +33,12 @@ import {
   userAchievements,
   pointsHistory
 } from "../drizzle/schema";
+<<<<<<< HEAD
 import type { User } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+=======
+import { eq, and, inArray } from "drizzle-orm";
+>>>>>>> 20a3975 (feat: fortalecer importacao em lote de alunos)
 import { calculatePlanProgress } from "./planProgressHelper";
 import { analisarSWOT, validarCanvas, analisarRiscos, gerarRecomendacoes, calcularSaudeEstrategia } from "./strategicHelper";
 import { calcularVPL, calcularTIR, calcularPayback, calcularFluxoCaixa, calcularDRE, calcularBalanco, calcularIndicadores, analisarFinanceiro } from "./financialHelper";
@@ -719,20 +723,38 @@ export const appRouter = router({
           throw new Error("Unauthorized");
         }
 
-        // Check which students are already enrolled
-        const existing = await db
-          .select()
-          .from(enrollments)
-          .where(
-            and(
-              eq(enrollments.classId, input.classId),
-              eq(enrollments.studentId, input.studentIds[0])
-            )
-          );
+        const uniqueStudentIds = Array.from(new Set(input.studentIds));
+        const candidateStudents = await db
+          .select({
+            id: users.id,
+            role: users.role,
+            institutionId: users.institutionId,
+          })
+          .from(users)
+          .where(inArray(users.id, uniqueStudentIds));
+
+        const validStudentRoles = new Set([
+          "aluno_individual",
+          "aluno_lider",
+          "aluno_editor",
+          "aluno_visualizador",
+        ]);
+
+        const validStudentIds = candidateStudents
+          .filter(
+            (student) =>
+              validStudentRoles.has(student.role) &&
+              student.institutionId === classItem.institutionId
+          )
+          .map((student) => student.id);
+
+        const invalidStudentIds = uniqueStudentIds.filter(
+          (studentId) => !validStudentIds.includes(studentId)
+        );
 
         // Filter out already enrolled students
         const toEnroll = [];
-        for (const studentId of input.studentIds) {
+        for (const studentId of validStudentIds) {
           const alreadyEnrolled = await db
             .select()
             .from(enrollments)
@@ -762,7 +784,9 @@ export const appRouter = router({
         return {
           success: true,
           enrolled: toEnroll.length,
-          skipped: input.studentIds.length - toEnroll.length,
+          skipped: validStudentIds.length - toEnroll.length,
+          invalid: invalidStudentIds.length,
+          invalidStudentIds,
         };
       }),
   }),
@@ -1588,6 +1612,7 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
 
 
 
