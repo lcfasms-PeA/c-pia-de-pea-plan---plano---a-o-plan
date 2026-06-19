@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Image generation helper using internal ImageService
  *
  * Example usage:
@@ -15,7 +15,7 @@
  *     }]
  *   });
  */
-import { storagePut } from "server/storage";
+import { storagePut } from "../storage";
 import { ENV } from "./env";
 
 export type GenerateImageOptions = {
